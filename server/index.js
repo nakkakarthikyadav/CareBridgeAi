@@ -179,11 +179,39 @@ function getClinicalFallbackResponse(prompt) {
       });
     }
 
+    // Check dietary preference
+    const isEggetarian = promptLower.includes('eggetarian');
+    const isNonVeg = promptLower.includes('non-vegetarian');
+
+    const proteinEmphasize = isNonVeg
+      ? { food: "Lean Animal & Wholesome Proteins (Grilled Skinless Poultry, Steamed Fish, Lentils)", benefit: "Provides high-bioavailability amino acids for rapid surgical tissue regeneration and immune competence." }
+      : isEggetarian
+      ? { food: "Protein-Rich Eggs & Plant Legumes (Boiled / Poached Eggs, Lentils, Moong Dal)", benefit: "Supplies complete amino acid profile and choline for optimal cellular repair and liver metabolic support." }
+      : { food: "Lean Plant & Wholesome Proteins (Lentils, Tofu, Steamed Beans, Paneer)", benefit: "Provides complete amino acids essential for cellular repair and immune defense without saturated animal fats." };
+
+    const breakfastMeal = isNonVeg
+      ? "Whole-grain toast with boiled eggs or lean shredded chicken, avocado, and fresh seasonal fruit."
+      : isEggetarian
+      ? "Two boiled or scrambled egg whites with whole-wheat toast, sliced avocado, and warm herbal tea."
+      : "Warm rolled oatmeal with sliced banana, flaxseeds, and low-fat fortified milk.";
+
+    const lunchMeal = isNonVeg
+      ? "Grilled lemon-herb chicken breast or baked white fish with brown rice, steamed broccoli, and fresh cucumber salad."
+      : isEggetarian
+      ? "Steamed whole-wheat roti or brown rice with yellow dal, boiled egg curry or egg scramble, and fresh cucumber salad."
+      : "Steamed whole-wheat roti or brown rice with lightly spiced yellow dal, sautéed greens, and cucumber.";
+
+    const dinnerMeal = isNonVeg
+      ? "Warm restorative chicken bone broth with steamed mixed vegetables and light quinoa."
+      : isEggetarian
+      ? "Egg-white frittata with spinach, mushrooms, steamed green beans, and warm vegetable broth."
+      : "Steamed mixed vegetables with seasoned tofu or paneer and a warm cup of vegetable broth.";
+
     // Default Clinical Recovery Diet Plan
     return JSON.stringify({
-      dietaryRationale: "Clinically structured post-discharge dietary recovery plan designed to optimize metabolic homeostasis, accelerate tissue repair, and protect against adverse food-drug interactions.",
+      dietaryRationale: `Clinically structured post-discharge ${isNonVeg ? 'non-vegetarian' : isEggetarian ? 'eggetarian' : 'vegetarian'} recovery plan designed to optimize metabolic homeostasis, accelerate tissue repair, and protect against adverse food-drug interactions.`,
       foodsToEmphasize: [
-        { food: "Lean Plant & Wholesome Proteins (Lentils, Tofu, Steamed Beans)", benefit: "Provides complete amino acids essential for cellular repair and immune defense." },
+        proteinEmphasize,
         { food: "Deep Green Leafy Vegetables (Spinach, Methi, Kale)", benefit: "Rich in micronutrients, magnesium, and dietary nitrates for microvascular circulation." },
         { food: "Whole Grain Complex Carbohydrates (Oats, Brown Rice, Millets)", benefit: "Provides steady sustained energy without sharp glycemic fluctuations." },
         { food: "Antioxidant-Rich Fresh Seasonal Fruits", benefit: "Combats surgical oxidative stress and replenishes vital electrolyte reserves." }
@@ -191,14 +219,14 @@ function getClinicalFallbackResponse(prompt) {
       foodsToStrictlyAvoid: [
         { food: "Excess Table Salt & High-Sodium Packaged Foods", reason: "Triggers fluid retention, peripheral edema, and increases cardiovascular workload." },
         { food: "Heavy Deep-Fried & Saturated Greasy Meals", reason: "Delays gastric emptying, triggers digestive distress, and elevates systemic inflammation." },
-        { food: "Refined Sugars & Carbonated Beverages", reason: "Impaire leukocyte wound-healing response and destabilizes energy levels." }
+        { food: "Refined Sugars & Carbonated Beverages", reason: "Impairs leukocyte wound-healing response and destabilizes energy levels." }
       ],
       sampleMealPlan: {
-        breakfast: "Warm rolled oatmeal with sliced banana, flaxseeds, and low-fat fortified milk.",
+        breakfast: breakfastMeal,
         midMorningSnack: "Fresh tender coconut water or herbal tea with 5-6 soaked almonds.",
-        lunch: "Steamed whole-wheat roti or brown rice with lightly spiced yellow dal, sautéed greens, and cucumber.",
+        lunch: lunchMeal,
         eveningSnack: "Light vegetable soup with roasted unsalted fox nuts (makhana).",
-        dinner: "Steamed mixed vegetables with seasoned tofu or paneer and a warm cup of vegetable broth."
+        dinner: dinnerMeal
       },
       hydrationGoal: "2.0 to 2.5 Liters of water daily spaced evenly throughout morning and afternoon hours."
     });

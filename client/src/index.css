@@ -2639,4 +2639,201 @@ body.theme-dark {
 [data-theme="dark"] .dashboard-mobile-header {
   background: #0f172a !important;
   border-bottom-color: #1e293b !important;
-}
+}
+
+/* ==========================================================================
+   Dietary Preference 3-Option Selector
+   ========================================================================== */
+.diet-options-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.15rem;
+}
+
+@media (max-width: 820px) {
+  .diet-options-selector-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+}
+
+.diet-option-card {
+  background: #ffffff;
+  border: 2px solid var(--border-light, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  padding: 1.2rem 1.25rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+  outline: none;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.diet-option-card:hover {
+  border-color: #a5b4fc;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.12);
+}
+
+.diet-option-card.active {
+  border-color: #4f46e5;
+  background: linear-gradient(145deg, #ffffff 0%, #f5f3ff 100%);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.18);
+}
+
+.diet-option-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.diet-option-icon-box {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.diet-option-card.active .diet-option-icon-box {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+  transform: scale(1.05);
+}
+
+.diet-option-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.diet-option-card.active .diet-option-badge {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4338ca;
+}
+
+.diet-option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.diet-option-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.diet-option-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+}
+
+.diet-option-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4);
+}
+
+.diet-option-uncheck {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.diet-option-desc {
+  font-size: 0.825rem;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Dark mode overrides for dietary options */
+[data-theme="dark"] .diet-option-card {
+  background: #131b2e;
+  border-color: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .diet-option-card:hover {
+  border-color: #6366f1;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .diet-option-card.active {
+  border-color: #818cf8;
+  background: linear-gradient(145deg, #18223d 0%, #201c4e 100%);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.28);
+}
+
+[data-theme="dark"] .diet-option-icon-box {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .diet-option-card.active .diet-option-icon-box {
+  background: #2e1065;
+  border-color: #6d28d9;
+}
+
+[data-theme="dark"] .diet-option-title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .diet-option-badge {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+[data-theme="dark"] .diet-option-card.active .diet-option-badge {
+  background: #6366f1;
+  color: #ffffff;
+  border-color: #818cf8;
+}
+
+[data-theme="dark"] .diet-option-check {
+  background: #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.5);
+}
+
+[data-theme="dark"] .diet-option-uncheck {
+  border-color: #475569;
+}
+
+[data-theme="dark"] .diet-option-desc {
+  color: #94a3b8;
+}
+

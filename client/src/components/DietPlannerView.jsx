@@ -9,12 +9,35 @@ const PRESET_CONDITIONS = [
   'Hypertension with Renal Sparing'
 ];
 
+export const DIETARY_OPTIONS = [
+  {
+    id: 'Vegetarian',
+    title: 'Vegetarian',
+    icon: '🥦',
+    badge: 'Pure Veg',
+    desc: 'Plant-based foods, lentils, grains, seasonal vegetables, legumes & dairy'
+  },
+  {
+    id: 'Non-Vegetarian',
+    title: 'Non-Vegetarian',
+    icon: '🍗',
+    badge: 'Non-Veg',
+    desc: 'Lean poultry, fresh fish, and meat balanced with healthy recovery vegetables'
+  },
+  {
+    id: 'Eggetarian',
+    title: 'Eggetarian',
+    icon: '🥚',
+    badge: 'Veg + Eggs',
+    desc: 'Wholesome vegetarian nutrition enriched with protein-rich eggs'
+  }
+];
+
 export default function DietPlannerView() {
   const [detectedRx, setDetectedRx] = useState(null);
   const [showCustomCondition, setShowCustomCondition] = useState(false);
   const [condition, setCondition] = useState(PRESET_CONDITIONS[0]);
-  const [preference, setPreference] = useState('Vegetarian / Mediterranean');
-  const [allergies, setAllergies] = useState('None');
+  const [preference, setPreference] = useState('Vegetarian');
   const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('carebridge_gemini_api_key') || '');
   const [showKeyConfig, setShowKeyConfig] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,7 +97,6 @@ export default function DietPlannerView() {
           medications: activeMeds,
           symptoms: detectedRx?.notes || '',
           dietaryPreference: preference,
-          allergies,
           apiKey: userApiKey.trim() || undefined
         })
       });
@@ -312,27 +334,48 @@ export default function DietPlannerView() {
           </div>
         )}
 
-        <div className="diet-inputs-grid">
-          <div>
-            <label className="form-label">Dietary Preference</label>
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="e.g. Vegetarian, Halal, Low-Carb..."
-              value={preference} 
-              onChange={(e) => setPreference(e.target.value)} 
-            />
+        <div style={{ marginBottom: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <label className="form-label" style={{ margin: 0, fontWeight: 800, fontSize: '0.95rem', color: 'var(--navy)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🥗</span> Dietary Preference:
+            </label>
+            <span style={{ fontSize: '0.78rem', color: '#4f46e5', fontWeight: 800, background: '#eef2ff', padding: '3px 10px', borderRadius: '9999px' }}>
+              ✓ Selected: {preference}
+            </span>
           </div>
 
-          <div>
-            <label className="form-label">Food Allergies / Intolerances</label>
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="e.g. Gluten, Nuts, Lactose, Shellfish..."
-              value={allergies} 
-              onChange={(e) => setAllergies(e.target.value)} 
-            />
+          <div className="diet-options-selector-grid">
+            {DIETARY_OPTIONS.map((opt) => {
+              const isSelected = preference === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setPreference(opt.id)}
+                  className={`diet-option-card ${isSelected ? 'active' : ''}`}
+                >
+                  <div className="diet-option-header">
+                    <div className="diet-option-icon-box">
+                      <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{opt.icon}</span>
+                    </div>
+                    <span className="diet-option-badge">
+                      {opt.badge}
+                    </span>
+                  </div>
+                  <div className="diet-option-body">
+                    <div className="diet-option-title-row">
+                      <strong className="diet-option-title">{opt.title}</strong>
+                      {isSelected ? (
+                        <span className="diet-option-check">✓</span>
+                      ) : (
+                        <span className="diet-option-uncheck" />
+                      )}
+                    </div>
+                    <p className="diet-option-desc">{opt.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
