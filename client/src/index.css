@@ -6,9 +6,9 @@
 :root {
   --primary: #4f46e5;
   --primary-hover: #4338ca;
-  --primary-light: #eef2ff;
-  --navy: #1e1b4b;
-  --navy-dark: #121829;
+  --primary-light: #f5f3ff;
+  --navy: #0f172a;
+  --navy-dark: #020617;
   --text-main: #334155;
   --text-muted: #64748b;
   --bg-page: #ffffff;
@@ -16,10 +16,11 @@
   --bg-card: #ffffff;
   --bg-subtle: #f8fafc;
   --border-light: #e2e8f0;
-  --danger: #ef4444;
-  --danger-light: #fef2f2;
+  --danger: #e11d48;
+  --danger-light: #fff1f2;
   --warning: #f59e0b;
-  --success: #6366f1;
+  --success: #10b981;
+  --success-light: #ecfdf5;
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
@@ -220,21 +221,21 @@
 }
 
 .diet-column-emphasize {
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
 }
 
 .diet-column-avoid {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: #fff1f2;
+  border: 1.5px solid #fecdd3;
 }
 
 .diet-column-title {
   font-weight: 800;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .diet-food-list {
@@ -251,40 +252,55 @@
   min-width: 0;
   box-sizing: border-box;
   word-break: break-word;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.diet-food-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .diet-food-item-emphasize {
-  border: 1px solid #d1fae5;
+  border: 1px solid #bbf7d0;
 }
 
 .diet-food-item-avoid {
-  border: 1px solid #fee2e2;
+  border: 1px solid #fecdd3;
 }
 
 .diet-food-title {
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
   font-weight: 700;
+  font-size: 0.92rem;
 }
 
 .diet-food-desc {
-  font-size: 0.85rem;
-  color: var(--text-main);
+  font-size: 0.825rem;
+  color: #475569;
   line-height: 1.5;
 }
 
 .diet-sample-meal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 1rem;
 }
 
 .diet-sample-meal-card {
   background: #f8fafc;
-  padding: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 14px 16px;
   border-radius: var(--radius-md);
   min-width: 0;
   box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.diet-sample-meal-card:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .search-input-group {
@@ -2581,38 +2597,40 @@ body.theme-dark {
 
 /* 8. Diet Planner & Clinical Cards in Dark Mode */
 [data-theme="dark"] .diet-column-emphasize {
-  background: #0d1527 !important;
-  border-color: #1e2c4f !important;
+  background: #062016 !important;
+  border-color: #166534 !important;
 }
 
 [data-theme="dark"] .diet-column-emphasize .diet-column-title {
-  color: #818cf8 !important;
+  color: #4ade80 !important;
 }
 
 [data-theme="dark"] .diet-column-avoid {
-  background: #230f14 !important;
-  border-color: #451a22 !important;
+  background: #20080e !important;
+  border-color: #881337 !important;
 }
 
 [data-theme="dark"] .diet-column-avoid .diet-column-title {
-  color: #f87171 !important;
+  color: #fb7185 !important;
 }
 
 [data-theme="dark"] .diet-food-item {
-  background: #131b2e !important;
+  background: #111c2e !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
 [data-theme="dark"] .diet-food-item-emphasize {
-  border-color: #1e293b !important;
+  background: #0a251b !important;
+  border-color: #14532d !important;
 }
 
 [data-theme="dark"] .diet-food-item-avoid {
-  border-color: #3b1820 !important;
+  background: #280d15 !important;
+  border-color: #4c0519 !important;
 }
 
 [data-theme="dark"] .diet-food-item-emphasize .diet-food-title {
-  color: #a5b4fc !important;
+  color: #86efac !important;
 }
 
 [data-theme="dark"] .diet-food-item-avoid .diet-food-title {
@@ -2620,11 +2638,12 @@ body.theme-dark {
 }
 
 [data-theme="dark"] .diet-food-desc {
-  color: #94a3b8 !important;
+  color: #cbd5e1 !important;
 }
 
 [data-theme="dark"] .diet-sample-meal-card {
-  background: #0f172a !important;
+  background: #111c2e !important;
+  border-color: #1e293b !important;
 }
 
 [data-theme="dark"] .dashboard-sidebar {

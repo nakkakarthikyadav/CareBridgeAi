@@ -212,28 +212,29 @@ export default function DietPlannerView() {
         {/* Prescription-Linked Clinical Profile */}
         {detectedRx ? (
           <div style={{
-            background: 'linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)',
-            border: '2px solid #bbf7d0',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderLeft: '5px solid #10b981',
             borderRadius: 'var(--radius-lg)',
-            padding: '1.5rem',
+            padding: '1.4rem 1.6rem',
             marginBottom: '1.5rem',
-            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.08)'
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.2rem' }}>🩺</span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Disease Extracted from Prescription
+                <span style={{ fontSize: '1.1rem' }}>📋</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Diagnosis Extracted from Prescription
                 </span>
-                <span style={{ background: '#dcfce7', color: '#166534', fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '9999px', border: '1px solid #86efac' }}>
-                  ✓ Auto-Extracted
+                <span style={{ background: '#ecfdf5', color: '#047857', fontSize: '0.72rem', fontWeight: 800, padding: '3px 9px', borderRadius: '9999px', border: '1px solid #a7f3d0' }}>
+                  ✓ Prescription Linked
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCustomCondition(!showCustomCondition)}
                 style={{
-                  background: '#ffffff',
+                  background: '#f8fafc',
                   border: '1px solid #cbd5e1',
                   color: '#475569',
                   padding: '5px 12px',
@@ -243,18 +244,18 @@ export default function DietPlannerView() {
                   cursor: 'pointer'
                 }}
               >
-                {showCustomCondition ? '✕ Hide Custom Input' : '✏️ Edit or Change Disease'}
+                {showCustomCondition ? '✕ Hide Custom Input' : '✏️ Change Condition'}
               </button>
             </div>
 
-            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: '4px 0 10px 0' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: '4px 0 10px 0' }}>
               {condition || detectedRx.diagnosis || detectedRx.title}
             </div>
 
             {detectedRx.medications && detectedRx.medications.length > 0 && (
-              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginTop: '10px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#475569', display: 'block', marginBottom: '4px' }}>
-                  💊 Prescribed Medications Evaluated for Food-Drug Safety:
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginTop: '10px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                  💊 Evaluated Medications for Food-Drug Interactions:
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
                   {detectedRx.medications.map(m => `${m.name || m.drugName || 'Medication'} ${m.dosage && m.dosage !== 'As directed' ? `(${m.dosage})` : ''}`).join(' • ')}
@@ -262,9 +263,9 @@ export default function DietPlannerView() {
               </div>
             )}
 
-            <div style={{ marginTop: '12px', fontSize: '0.8rem', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ marginTop: '12px', fontSize: '0.8rem', color: '#047857', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span>✨</span>
-              <span>Gemini AI extracts the exact dietary plan for this disease and protects against food-drug interactions. No typing required!</span>
+              <span>Gemini AI tailors the recovery diet plan to this clinical indication and safeguards against adverse food-drug interactions.</span>
             </div>
           </div>
         ) : (
@@ -412,55 +413,64 @@ export default function DietPlannerView() {
         {result && (
           <div style={{ marginTop: '2.5rem', borderTop: '2px solid var(--border-light)', paddingTop: '2rem' }}>
             {/* Header with AI Source badge */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '1.5rem' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                   Targeted Clinical Plan
                 </span>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--dark-indigo)', margin: '2px 0 0 0' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: '3px 0 0 0' }}>
                   {result.identifiedDisease || condition || 'Clinical Recovery Protocol'}
                 </h3>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{
-                  padding: '5px 12px',
+                  padding: '6px 14px',
                   borderRadius: '9999px',
                   fontSize: '0.78rem',
                   fontWeight: 800,
-                  background: preference === 'Vegetarian' ? '#ecfdf5' : preference === 'Non-Vegetarian' ? '#fef2f2' : '#fefce8',
-                  color: preference === 'Vegetarian' ? '#047857' : preference === 'Non-Vegetarian' ? '#b91c1c' : '#b45309',
-                  border: `1px solid ${preference === 'Vegetarian' ? '#a7f3d0' : preference === 'Non-Vegetarian' ? '#fecaca' : '#fef08a'}`,
+                  background: preference === 'Vegetarian' ? '#ecfdf5' : preference === 'Non-Vegetarian' ? '#fff7ed' : '#eef2ff',
+                  color: preference === 'Vegetarian' ? '#047857' : preference === 'Non-Vegetarian' ? '#c2410c' : '#4338ca',
+                  border: `1px solid ${preference === 'Vegetarian' ? '#a7f3d0' : preference === 'Non-Vegetarian' ? '#ffedd5' : '#c7d2fe'}`,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px'
+                  gap: '6px'
                 }}>
-                  {preference === 'Vegetarian' ? '🥦 Vegetarian Diet' : preference === 'Non-Vegetarian' ? '🍗 Non-Vegetarian Diet' : '🥚 Eggetarian Diet'}
+                  {preference === 'Vegetarian' ? '🥦 Pure Vegetarian' : preference === 'Non-Vegetarian' ? '🍗 Non-Vegetarian' : '🥚 Eggetarian'}
                 </span>
                 <span style={{
-                  padding: '5px 14px',
+                  padding: '6px 14px',
                   borderRadius: '9999px',
                   fontSize: '0.78rem',
                   fontWeight: 700,
-                  background: aiSource?.includes('Gemini') ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#ecfdf5',
-                  color: aiSource?.includes('Gemini') ? '#ffffff' : '#065f46',
-                  border: aiSource?.includes('Gemini') ? 'none' : '1px solid #a7f3d0',
+                  background: aiSource?.includes('Gemini') ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : '#f1f5f9',
+                  color: aiSource?.includes('Gemini') ? '#ffffff' : '#334155',
+                  border: aiSource?.includes('Gemini') ? 'none' : '1px solid #cbd5e1',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
                   boxShadow: aiSource?.includes('Gemini') ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none'
                 }}>
-                  {aiSource?.includes('Gemini') ? `✨ ${aiSource}` : '🛡️ CareBridge Clinical Nutritionist Protocol'}
+                  {aiSource?.includes('Gemini') ? `✨ ${aiSource}` : '🛡️ CareBridge Clinical Nutrition Protocol'}
                 </span>
               </div>
             </div>
 
             {/* Rationale */}
             {result.dietaryRationale && (
-              <div style={{ background: 'var(--primary-light)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem' }}>
-                <h4 style={{ color: 'var(--primary)', fontWeight: 800, marginBottom: '0.5rem' }}>
-                  🧬 Recovery Nutrition Rationale
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderLeft: '4px solid #4f46e5',
+                padding: '1.25rem 1.5rem',
+                borderRadius: 'var(--radius-lg)',
+                marginBottom: '1.5rem'
+              }}>
+                <h4 style={{ color: '#0f172a', fontWeight: 800, fontSize: '0.95rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🧬</span> Recovery Nutrition Rationale
                 </h4>
-                <p style={{ lineHeight: 1.6, color: 'var(--text-main)', margin: 0 }}>{result.dietaryRationale}</p>
+                <p style={{ lineHeight: 1.65, color: '#334155', margin: 0, fontSize: '0.92rem' }}>
+                  {result.dietaryRationale}
+                </p>
               </div>
             )}
 
@@ -468,9 +478,14 @@ export default function DietPlannerView() {
             <div className="diet-columns-grid">
               {/* Emphasize */}
               <div className="diet-column-card diet-column-emphasize">
-                <h4 className="diet-column-title" style={{ color: '#312e81' }}>
-                  <span>🟢</span> Foods to Emphasize
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h4 className="diet-column-title" style={{ margin: 0, color: '#166534', fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🥦</span> Foods to Emphasize
+                  </h4>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '9999px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
+                    ✓ Recommended
+                  </span>
+                </div>
                 <div className="diet-food-list">
                   {result.foodsToEmphasize && result.foodsToEmphasize.length > 0 ? (
                     result.foodsToEmphasize.map((f, i) => {
@@ -478,7 +493,7 @@ export default function DietPlannerView() {
                       const desc = typeof f === 'string' ? (f.includes(':') ? f.split(':').slice(1).join(':') : 'Supports recovery') : (f.benefit || f.reason || f.description || 'Supports recovery');
                       return (
                         <div key={i} className="diet-food-item diet-food-item-emphasize">
-                          <strong className="diet-food-title" style={{ color: '#4338ca' }}>{title}</strong>
+                          <strong className="diet-food-title" style={{ color: '#15803d' }}>{title}</strong>
                           <div className="diet-food-desc">{desc}</div>
                         </div>
                       );
@@ -493,9 +508,14 @@ export default function DietPlannerView() {
 
               {/* Avoid */}
               <div className="diet-column-card diet-column-avoid">
-                <h4 className="diet-column-title" style={{ color: '#991b1b' }}>
-                  <span>🔴</span> Foods to Strictly Avoid
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h4 className="diet-column-title" style={{ margin: 0, color: '#9f1239', fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>⚠️</span> Foods to Strictly Avoid
+                  </h4>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '9999px', background: '#ffe4e6', color: '#be123c', border: '1px solid #fecdd3' }}>
+                    ✕ Restricted
+                  </span>
+                </div>
                 <div className="diet-food-list">
                   {result.foodsToStrictlyAvoid && result.foodsToStrictlyAvoid.length > 0 ? (
                     result.foodsToStrictlyAvoid.map((f, i) => {
@@ -503,7 +523,7 @@ export default function DietPlannerView() {
                       const desc = typeof f === 'string' ? (f.includes(':') ? f.split(':').slice(1).join(':') : 'Interferes with recovery') : (f.reason || f.benefit || f.description || 'Interferes with recovery');
                       return (
                         <div key={i} className="diet-food-item diet-food-item-avoid">
-                          <strong className="diet-food-title" style={{ color: '#b91c1c' }}>{title}</strong>
+                          <strong className="diet-food-title" style={{ color: '#be123c' }}>{title}</strong>
                           <div className="diet-food-desc">{desc}</div>
                         </div>
                       );
@@ -519,26 +539,26 @@ export default function DietPlannerView() {
 
             {/* Sample Meal Plan */}
             {result.sampleMealPlan && (
-              <div style={{ background: '#ffffff', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', marginBottom: '1.5rem' }}>
-                <h4 style={{ fontWeight: 800, color: 'var(--dark-indigo)', marginBottom: '1rem' }}>
-                  🍽️ Sample Daily Recovery Menu
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-lg)', padding: '1.4rem 1.6rem', marginBottom: '1.5rem', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)' }}>
+                <h4 style={{ fontWeight: 800, color: '#0f172a', marginBottom: '1rem', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🍽️</span> 24-Hour Recovery Nutrition Schedule
                 </h4>
                 <div className="diet-sample-meal-grid">
                   <div className="diet-sample-meal-card">
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Breakfast</span>
-                    <p style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.breakfast}</p>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.5px', background: '#eef2ff', padding: '2px 8px', borderRadius: '9999px', display: 'inline-block', marginBottom: '6px' }}>🌅 Breakfast</span>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.5 }}>{result.sampleMealPlan.breakfast}</p>
                   </div>
                   <div className="diet-sample-meal-card">
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Lunch</span>
-                    <p style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.lunch}</p>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.5px', background: '#ecfdf5', padding: '2px 8px', borderRadius: '9999px', display: 'inline-block', marginBottom: '6px' }}>☀️ Lunch</span>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.5 }}>{result.sampleMealPlan.lunch}</p>
                   </div>
                   <div className="diet-sample-meal-card">
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Snack</span>
-                    <p style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.eveningSnack || result.sampleMealPlan.midMorningSnack || 'Herbal tea with soaked nuts'}</p>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.5px', background: '#fef3c7', padding: '2px 8px', borderRadius: '9999px', display: 'inline-block', marginBottom: '6px' }}>☕ Afternoon Snack</span>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.5 }}>{result.sampleMealPlan.eveningSnack || result.sampleMealPlan.midMorningSnack || 'Warm herbal tea with soaked almonds'}</p>
                   </div>
                   <div className="diet-sample-meal-card">
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Dinner</span>
-                    <p style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.dinner}</p>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '9999px', display: 'inline-block', marginBottom: '6px' }}>🌙 Dinner</span>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1e293b', margin: 0, lineHeight: 1.5 }}>{result.sampleMealPlan.dinner}</p>
                   </div>
                 </div>
               </div>
@@ -546,11 +566,19 @@ export default function DietPlannerView() {
 
             {/* Hydration */}
             {result.hydrationGoal && (
-              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '1rem 1.5rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{
+                background: '#f0fdfa',
+                border: '1.5px solid #99f6e4',
+                padding: '1.1rem 1.4rem',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
                 <span style={{ fontSize: '1.5rem' }}>💧</span>
                 <div>
-                  <strong style={{ color: '#0369a1' }}>Daily Hydration Target:</strong>
-                  <span style={{ marginLeft: '6px', fontSize: '0.9rem', color: '#0c4a6e' }}>{result.hydrationGoal}</span>
+                  <strong style={{ color: '#0f766e', fontSize: '0.92rem' }}>Daily Hydration Protocol:</strong>
+                  <span style={{ marginLeft: '6px', fontSize: '0.9rem', color: '#134e4a', fontWeight: 600 }}>{result.hydrationGoal}</span>
                 </div>
               </div>
             )}
