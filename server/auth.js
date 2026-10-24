@@ -74,35 +74,16 @@ export function verifyToken(token) {
   }
 }
 
-// Seed default demo user if file doesn't exist
+// Initial user list is empty
 function getSeedUsers() {
-  const demoSalt = '7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c';
-  const demoHash = crypto.scryptSync('password123', demoSalt, 64).toString('hex');
-
-  return [
-    {
-      id: 'usr_demo_sarah',
-      name: 'Sarah Jenkins',
-      email: 'sarah@carebridge.ai',
-      phone: '+1 (555) 019-2834',
-      passwordHash: demoHash,
-      salt: demoSalt,
-      authProvider: 'local',
-      diagnosis: 'Acute Coronary Syndrome s/p LAD Stent Placement',
-      emergencyContact: 'Mark Jenkins (Spouse) - +1 (555) 019-9999',
-      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=256',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastLoginAt: new Date().toISOString()
-    }
-  ];
+  return [];
 }
 
 // Read users from JSON file
 export function readUsers() {
   try {
     if (!fs.existsSync(USERS_FILE)) {
-      const initialUsers = getSeedUsers();
+      const initialUsers = [];
       fs.writeFileSync(USERS_FILE, JSON.stringify(initialUsers, null, 2), 'utf-8');
       return initialUsers;
     }
@@ -110,7 +91,7 @@ export function readUsers() {
     return JSON.parse(data);
   } catch (err) {
     console.error('Error reading users database:', err);
-    return getSeedUsers();
+    return [];
   }
 }
 

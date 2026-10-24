@@ -1,45 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { playMedicalChime, triggerBrowserNotification } from '../utils/audioChime';
 
-const INITIAL_MEDS = [
-  { id: 'm1', text: 'Aspirin (81mg) — take only as directed by the cardiac surgeon.', category: 'Confirmed Medications', done: false, time: '08:00 AM' },
-  { id: 'm2', text: 'Atorvastatin (80mg) — take only as directed by the cardiac surgeon.', category: 'Confirmed Medications', done: false, time: '10:00 PM' },
-  { id: 'm3', text: 'Metoprolol (25mg) — take only as directed by the cardiac surgeon.', category: 'Confirmed Medications', done: false, time: '08:00 AM / 08:00 PM' },
-  { id: 'm4', text: 'Ticagrelor (90mg) — follow the actual hospital discharge medication list.', category: 'Confirmed Medications', done: false, time: '08:00 PM' }
-];
-
-const INITIAL_ADVICE = [
-  { id: 'a1', text: "Take medicines according to the treating team's written instructions.", category: 'Discharge Advice', done: false },
-  { id: 'a2', text: "Follow the hospital's instructions for keeping the surgical wound clean and dry.", category: 'Discharge Advice', done: false },
-  { id: 'a3', text: 'Walk and increase activity gradually, as advised by the surgeon (10 mins twice daily).', category: 'Discharge Advice', done: false },
-  { id: 'a4', text: 'Attend the scheduled cardiac surgery follow-up appointment in 10 days.', category: 'Discharge Advice', done: false }
-];
-
-const INITIAL_DIET = [
-  { id: 'd1', text: 'Follow low-sodium cardiac diet (<2,000 mg/day).', category: 'Diet & Lifestyle', done: false },
-  { id: 'd2', text: 'Avoid heavy lifting over 10 lbs for 2 weeks.', category: 'Diet & Lifestyle', done: false }
-];
+const INITIAL_MEDS = [];
+const INITIAL_ADVICE = [];
+const INITIAL_DIET = [];
 
 export default function TimelineView({ setToastMessage }) {
   const [meds, setMeds] = useState(() => {
-    const saved = localStorage.getItem('carebridge_meds_checklist');
-    return saved ? JSON.parse(saved) : INITIAL_MEDS;
+    try {
+      const saved = localStorage.getItem('carebridge_meds_checklist');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const filtered = parsed.filter(m => !['m1', 'm2', 'm3', 'm4'].includes(m.id));
+        if (filtered.length > 0) return filtered;
+      }
+      // Automatic sync from latest prescriptions
+      const rxSaved = localStorage.getItem('carebridge_portal_prescriptions');
+      if (rxSaved) {
+        const rxs = JSON.parse(rxSaved).filter(p => p.id !== 'rx_1' && p.id !== 'rx_2');
+        const extracted = rxs.flatMap(rx => (rx.medications || []).map((m, idx) => ({
+          id: `rx_med_${rx.id}_${idx}`,
+          title: `${m.name} ${m.dosage && m.dosage !== 'As directed' ? m.dosage : ''}`.trim(),
+          time: m.schedule?.toLowerCase().includes('night') || m.schedule?.toLowerCase().includes('evening') ? '08:00 PM' : '08:00 AM',
+          dose: m.dosage || '1 dose',
+          done: false,
+          alarmEnabled: true
+        })));
+        if (extracted.length > 0) return extracted;
+      }
+    } catch {}
+    return [];
   });
 
   const [advice, setAdvice] = useState(() => {
-    const saved = localStorage.getItem('carebridge_advice_checklist');
-    return saved ? JSON.parse(saved) : INITIAL_ADVICE;
+    try {
+      const saved = localStorage.getItem('carebridge_advice_checklist');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.filter(a => !['a1', 'a2', 'a3', 'a4'].includes(a.id));
+      }
+    } catch {}
+    return [];
   });
 
   const [diet, setDiet] = useState(() => {
-    const saved = localStorage.getItem('carebridge_diet_checklist');
-    return saved ? JSON.parse(saved) : INITIAL_DIET;
+    try {
+      const saved = localStorage.getItem('carebridge_diet_checklist');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.filter(d => !['d1', 'd2'].includes(d.id));
+      }
+    } catch {}
+    return [];
   });
 
   const [activityLogs, setActivityLogs] = useState(() => {
     const saved = localStorage.getItem('carebridge_activity_logs');
     return saved ? JSON.parse(saved) : [];
   });
+
+  // Adding new custom item state
+  const [newItemText, setNewItemText] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState('meds'); // 'meds' | 'advice' | 'diet'
+  const [newItemTime, setNewItemTime] = useState('08:00 AM');
+  const [showAddForm, setShowAddForm] = useState(false);
 
   // Save to localStorage
   useEffect(() => {
@@ -99,6 +123,30 @@ export default function TimelineView({ setToastMessage }) {
     setActivityLogs(prev => [text, ...prev.slice(0, 6)]);
   };
 
+  const handleAddItem = (e) => {
+    e.preventDefault();
+    if (!newItemText.trim()) return;
+    const newItem = {
+      id: `task_${Date.now()}`,
+      text: newItemText.trim(),
+      category: newItemCategory === 'meds' ? 'Confirmed Medications' : newItemCategory === 'advice' ? 'Discharge Advice' : 'Diet & Lifestyle',
+      done: false,
+      ...(newItemCategory === 'meds' ? { time: newItemTime } : {})
+    };
+
+    if (newItemCategory === 'meds') {
+      setMeds(prev => [...prev, newItem]);
+    } else if (newItemCategory === 'advice') {
+      setAdvice(prev => [...prev, newItem]);
+    } else {
+      setDiet(prev => [...prev, newItem]);
+    }
+
+    setToastMessage(`Added task to ${newItem.category}`);
+    setNewItemText('');
+    setShowAddForm(false);
+  };
+
   const handleMarkAllDone = () => {
     playMedicalChime();
     setMeds(prev => prev.map(i => ({ ...i, done: true })));
@@ -129,168 +177,255 @@ export default function TimelineView({ setToastMessage }) {
         
         {/* Left Column: Daily Recovery Checklist */}
         <div className="checklist-column">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '1.6rem' }}>📋</span>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--navy)' }}>
-              Daily Recovery Checklist
-            </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.6rem' }}>📋</span>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#000000', margin: 0 }}>
+                Daily Recovery Checklist
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAddForm(!showAddForm)}
+              style={{
+                background: '#000000',
+                color: '#ffffff',
+                border: '1px solid #000000',
+                borderRadius: '8px',
+                padding: '6px 14px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              {showAddForm ? '✕ Close Form' : '➕ Add Item'}
+            </button>
           </div>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+          <p style={{ fontSize: '0.875rem', color: '#000000', marginBottom: '1.5rem' }}>
             Check off items as you complete them throughout your day.
           </p>
+
+          {/* Add Item Form */}
+          {showAddForm && (
+            <form onSubmit={handleAddItem} style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 'var(--radius-md)',
+              padding: '1.25rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '10px', marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="Task or medicine description..."
+                  value={newItemText}
+                  onChange={(e) => setNewItemText(e.target.value)}
+                  className="auth-input"
+                  required
+                />
+                <select
+                  value={newItemCategory}
+                  onChange={(e) => setNewItemCategory(e.target.value)}
+                  className="form-select"
+                >
+                  <option value="meds">Medication</option>
+                  <option value="advice">Advice</option>
+                  <option value="diet">Diet & Lifestyle</option>
+                </select>
+              </div>
+
+              {newItemCategory === 'meds' && (
+                <div style={{ marginBottom: '10px' }}>
+                  <input
+                    type="text"
+                    placeholder="Schedule time (e.g. 08:00 AM)"
+                    value={newItemTime}
+                    onChange={(e) => setNewItemTime(e.target.value)}
+                    className="auth-input"
+                  />
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="btn-hero-launch"
+                style={{ width: '100%', justifyContent: 'center', padding: '8px' }}
+              >
+                Save Item to Checklist
+              </button>
+            </form>
+          )}
 
           {/* Section 1: Confirmed Medications */}
           <div style={{ marginBottom: '1.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.85rem' }}>
               <span style={{ fontSize: '1.25rem' }}>💊</span>
-              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)' }}>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#000000' }}>
                 Confirmed Medications
               </h4>
-              <span style={{ fontSize: '0.8rem', color: '#64748b', cursor: 'pointer' }}>🔗</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {meds.map(item => (
-                <div 
-                  key={item.id}
-                  onClick={() => toggleItem(item.id, 'meds')}
-                  style={{
-                    background: item.done ? '#f8fafc' : '#ffffff',
-                    border: `1px solid ${item.done ? '#bbf7d0' : '#e2e8f0'}`,
-                    borderRadius: 'var(--radius-md)',
-                    padding: '10px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={item.done} 
-                      onChange={() => {}} 
-                      style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#4f46e5' }}
-                    />
-                    <span style={{ 
-                      fontSize: '0.9rem', 
-                      fontWeight: 600, 
-                      color: item.done ? '#15803d' : 'var(--navy)',
-                      textDecoration: item.done ? 'line-through' : 'none'
-                    }}>
-                      {item.text}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    title="Play synthesized audio alarm chime"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSoundChime(item.text.split('—')[0].trim());
-                    }}
+              {meds.length === 0 ? (
+                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #000000', background: '#ffffff', color: '#000000', fontSize: '0.85rem', textAlign: 'center' }}>
+                  ⚪ No medications in checklist yet. Use "+ Add Item" or upload a prescription.
+                </div>
+              ) : (
+                meds.map(item => (
+                  <div 
+                    key={item.id}
+                    onClick={() => toggleItem(item.id, 'meds')}
                     style={{
-                      background: 'none',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '50%',
-                      width: '28px',
-                      height: '28px',
-                      cursor: 'pointer',
+                      background: item.done ? '#f4f4f5' : '#ffffff',
+                      border: `1.5px solid #000000`,
+                      borderRadius: 'var(--radius-md)',
+                      padding: '10px 14px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem'
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    🔔
-                  </button>
-                </div>
-              ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={item.done} 
+                        onChange={() => {}} 
+                        style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#000000' }}
+                      />
+                      <span style={{ 
+                        fontSize: '0.9rem', 
+                        fontWeight: 700, 
+                        color: item.done ? '#71717a' : '#000000',
+                        textDecoration: item.done ? 'line-through' : 'none'
+                      }}>
+                        {item.text}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      title="Play synthesized audio alarm chime"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSoundChime(item.text.split('—')[0].trim());
+                      }}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #000000',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      🔔
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           {/* Section 2: Discharge Advice */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)', marginBottom: '0.85rem' }}>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#000000', marginBottom: '0.85rem' }}>
               🩺 Discharge Advice
             </h4>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {advice.map(item => (
-                <div 
-                  key={item.id}
-                  onClick={() => toggleItem(item.id, 'advice')}
-                  style={{
-                    background: item.done ? '#f8fafc' : '#ffffff',
-                    border: `1px solid ${item.done ? '#bbf7d0' : '#e2e8f0'}`,
-                    borderRadius: 'var(--radius-md)',
-                    padding: '10px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <input 
-                    type="checkbox" 
-                    checked={item.done} 
-                    onChange={() => {}} 
-                    style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#4f46e5' }}
-                  />
-                  <span style={{ 
-                    fontSize: '0.9rem', 
-                    fontWeight: 500, 
-                    color: item.done ? '#15803d' : '#334155',
-                    textDecoration: item.done ? 'line-through' : 'none'
-                  }}>
-                    {item.text}
-                  </span>
+              {advice.length === 0 ? (
+                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #000000', background: '#ffffff', color: '#000000', fontSize: '0.85rem', textAlign: 'center' }}>
+                  ⚪ No discharge advice in checklist yet.
                 </div>
-              ))}
+              ) : (
+                advice.map(item => (
+                  <div 
+                    key={item.id}
+                    onClick={() => toggleItem(item.id, 'advice')}
+                    style={{
+                      background: item.done ? '#f4f4f5' : '#ffffff',
+                      border: `1.5px solid #000000`,
+                      borderRadius: 'var(--radius-md)',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={item.done} 
+                      onChange={() => {}} 
+                      style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#000000' }}
+                    />
+                    <span style={{ 
+                      fontSize: '0.9rem', 
+                      fontWeight: 600, 
+                      color: item.done ? '#71717a' : '#000000',
+                      textDecoration: item.done ? 'line-through' : 'none'
+                    }}>
+                      {item.text}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           {/* Section 3: Diet & Lifestyle */}
           <div>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)', marginBottom: '0.85rem' }}>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#000000', marginBottom: '0.85rem' }}>
               🥗 Diet &amp; Lifestyle Instructions
             </h4>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {diet.map(item => (
-                <div 
-                  key={item.id}
-                  onClick={() => toggleItem(item.id, 'diet')}
-                  style={{
-                    background: item.done ? '#f8fafc' : '#ffffff',
-                    border: `1px solid ${item.done ? '#bbf7d0' : '#e2e8f0'}`,
-                    borderRadius: 'var(--radius-md)',
-                    padding: '10px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <input 
-                    type="checkbox" 
-                    checked={item.done} 
-                    onChange={() => {}} 
-                    style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#4f46e5' }}
-                  />
-                  <span style={{ 
-                    fontSize: '0.9rem', 
-                    fontWeight: 500, 
-                    color: item.done ? '#15803d' : '#334155',
-                    textDecoration: item.done ? 'line-through' : 'none'
-                  }}>
-                    {item.text}
-                  </span>
+              {diet.length === 0 ? (
+                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #000000', background: '#ffffff', color: '#000000', fontSize: '0.85rem', textAlign: 'center' }}>
+                  ⚪ No diet or lifestyle instructions recorded yet.
                 </div>
-              ))}
+              ) : (
+                diet.map(item => (
+                  <div 
+                    key={item.id}
+                    onClick={() => toggleItem(item.id, 'diet')}
+                    style={{
+                      background: item.done ? '#f4f4f5' : '#ffffff',
+                      border: `1.5px solid #000000`,
+                      borderRadius: 'var(--radius-md)',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={item.done} 
+                      onChange={() => {}} 
+                      style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#000000' }}
+                    />
+                    <span style={{ 
+                      fontSize: '0.9rem', 
+                      fontWeight: 600, 
+                      color: item.done ? '#71717a' : '#000000',
+                      textDecoration: item.done ? 'line-through' : 'none'
+                    }}>
+                      {item.text}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -328,48 +463,48 @@ export default function TimelineView({ setToastMessage }) {
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
                   Adherence Rate
                 </span>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: adherenceRate >= 80 ? '#4ade80' : '#fbbf24', marginTop: '2px' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#ffffff', marginTop: '2px' }}>
                   {adherenceRate}%
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 3-Day Adherence Streak Badge */}
+          {/* Adherence Streak Badge */}
           <div style={{
-            background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-            color: '#4338ca',
+            background: '#ffffff',
+            color: '#000000',
             borderRadius: 'var(--radius-md)',
             padding: '12px 16px',
             fontWeight: 800,
             fontSize: '0.9rem',
             textAlign: 'center',
-            border: '1px solid #c7d2fe',
+            border: '1.5px solid #000000',
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px'
           }}>
-            <span>🔥</span>
-            <span>3-Day Adherence Streak</span>
+            <span>{completedCount > 0 ? '🔥' : '🌱'}</span>
+            <span>{completedCount > 0 && adherenceRate === 100 ? '100% Adherence Milestone Reached' : `${completedCount} of ${totalCount} Daily Tasks Finished`}</span>
           </div>
 
           {/* Recent Activity Log */}
           <div style={{
             background: '#ffffff',
-            border: '1px solid var(--border-light)',
+            border: '1.5px solid #000000',
             borderRadius: 'var(--radius-lg)',
             padding: '1.25rem',
             marginBottom: '1.5rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.95rem', color: 'var(--navy)', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 900, fontSize: '0.95rem', color: '#000000', marginBottom: '0.75rem' }}>
               <span>🕒</span>
               <span>Recent Activity Log</span>
             </div>
 
             {activityLogs.length === 0 ? (
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.85rem', color: '#000000', lineHeight: 1.5 }}>
                 ⚪ No activity recorded yet today. Check off your first task on the left to start tracking!
               </p>
             ) : (

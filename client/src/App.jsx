@@ -72,14 +72,8 @@ export default function App() {
     else if (tabName === 'document') mapped = 'upload';
     
     setDashboardInitialStep(mapped);
-
-    if (userProfile?.isLoggedIn || (userProfile?.name && userProfile.name.trim().length > 0)) {
-      setCurrentView('dashboard');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      setIsProfileOpen(true);
-      setToastMessage('Please sign in or use 1-click Demo Login to access your Patient Dashboard & Recovery tools.');
-    }
+    setCurrentView('dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleLoginSuccess = (user) => {

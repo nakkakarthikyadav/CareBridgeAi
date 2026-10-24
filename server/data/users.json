@@ -1,17 +1,1 @@
-[
-  {
-    "id": "usr_demo_sarah",
-    "name": "Sarah Jenkins",
-    "email": "sarah@carebridge.ai",
-    "phone": "+1 (555) 019-2834",
-    "passwordHash": "136f139dde10e6106219d3152c6dabf8aa0e46450f112e62a7dbe81c19807ce3c70e684920230384e00624fa86aec65b03241ed49e307cb8f7a1e312b20fb8bf",
-    "salt": "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
-    "authProvider": "local",
-    "diagnosis": "Acute Coronary Syndrome s/p LAD Stent Placement",
-    "emergencyContact": "Mark Jenkins (Spouse) - +1 (555) 019-9999",
-    "avatarUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=256",
-    "createdAt": "2026-10-22T17:11:51.969Z",
-    "updatedAt": "2026-10-22T17:11:51.970Z",
-    "lastLoginAt": "2026-10-22T17:11:51.970Z"
-  }
-]
+[]

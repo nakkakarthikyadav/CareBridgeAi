@@ -104,94 +104,8 @@ async function callGemini(prompt, systemInstruction = '', inlineData = null) {
     }
   }
 
-  // High-accuracy clinical fallback if API key quota exceeded or offline
-  return getClinicalFallbackResponse(prompt);
-}
-
-// Built-in clinical fallback responses based on query
-function getClinicalFallbackResponse(prompt) {
-  if (prompt.includes('handwritten prescription') || prompt.includes('Rx:')) {
-    return JSON.stringify({
-      detectedDoctor: "Dr. Eleanor Vance, MD (Internal Medicine)",
-      detectedClinic: "St. Elizabeth Medical Clinic • Phone: 555-0198",
-      prescriptionDate: "26 Oct 2026",
-      patientName: "Sarah Jenkins | Age: 34",
-      rawHandwrittenLines: [
-        "Rx: Amoxicillin 500mg tid x 7 days",
-        "Paracetamol 650mg sos",
-        "Pantoprazole 40mg od before breakfast",
-        "Dr. Eleanor Vance, MD"
-      ],
-      normalizedDigitalText: "PRESCRIPTION DETAILS:\n• Amoxicillin 500mg - Take 1 capsule 3 times a day for 7 days (Finish full course).\n• Paracetamol 650mg - Take 1 tablet as needed for fever or pain.\n• Pantoprazole 40mg - Take 1 tablet once daily before breakfast for stomach protection.",
-      medicationsList: [
-        {
-          drugName: "Amoxicillin",
-          dosage: "500 mg",
-          frequency: "Three times a day (every 8 hours)",
-          duration: "7 days",
-          instructions: "Take with a full glass of water. Complete full course even if feeling better.",
-          caution: "Do not skip doses. Stop and call doctor if skin rash develops."
-        },
-        {
-          drugName: "Paracetamol",
-          dosage: "650 mg",
-          frequency: "As needed (SOS)",
-          duration: "3-5 days",
-          instructions: "Take when pain or fever occurs. Maintain at least 6 hours between doses.",
-          caution: "Do not exceed 3,000 mg in 24 hours to protect liver."
-        },
-        {
-          drugName: "Pantoprazole",
-          dosage: "40 mg",
-          frequency: "Once daily (OD)",
-          duration: "14 days",
-          instructions: "Take 30 minutes before morning breakfast with water.",
-          caution: "Do not crush or chew tablet."
-        }
-      ],
-      abbreviationsExpanded: [
-        { abbreviation: "Rx", meaning: "Prescription (Recipe / Take thou)" },
-        { abbreviation: "tid", meaning: "Ter in die (Three times daily)" },
-        { abbreviation: "sos", meaning: "Si opus sit (If needed for emergency / pain)" },
-        { abbreviation: "od", meaning: "Omni die (Once daily)" }
-      ],
-      confidenceScore: "98.2%"
-    });
-  }
-
-  if (prompt.includes('confusion') || prompt.includes('Metoprolol') || prompt.includes('Hydralazine')) {
-    return JSON.stringify({
-      riskLevel: "High",
-      lookAlikeDrugs: [
-        {
-          name: "Metoprolol Tartrate vs Metoprolol Succinate ER",
-          distinction: "Tartrate is immediate-release (taken 2-3 times daily with meals). Succinate is 24-hour extended-release (taken once daily). Confusing them can cause severe blood pressure spikes or bradycardia."
-        },
-        {
-          name: "Hydralazine vs Hydroxyzine",
-          distinction: "Hydralazine is a potent vasodilator for severe hypertension. Hydroxyzine is an antihistamine for anxiety/allergies. Mixing them up has caused fatal hospital emergencies."
-        }
-      ],
-      safetyAlert: "CRITICAL SAFETY DISTINCTION: Verify the exact suffix and release mechanism on your pill bottle. Never crush extended-release (ER/XL) formulations.",
-      actionableGuidance: "Check the exact pharmacy label. Confirm whether your prescription says 'Immediate Release' or 'Extended Release ER'.",
-      questionsToConfirmWithPharmacist: [
-        "Is this the exact same release formulation I took in the hospital?",
-        "Should I take this dose with meals or on an empty stomach?",
-        "What pulse rate should I hold this medication for?"
-      ]
-    });
-  }
-
-  // Default structured response
-  return JSON.stringify({
-    summary: "Patient post-discharge recovery plan evaluated. All vital parameters and medication schedules verified against standard clinical protocols.",
-    medications: [
-      { name: "Aspirin 81mg", purpose: "Blood thinner to protect stent", schedule: "08:00 AM Daily", instructions: "Take with breakfast", criticalWarning: "Do not discontinue without cardiologist approval." }
-    ],
-    dailyCareChecklist: ["Check blood pressure daily", "Walk 10 minutes twice daily", "Inspect incisions for redness"],
-    emergencyRedFlags: ["Chest pain or tightness", "Shortness of breath while resting", "Unusual swelling in legs"],
-    followUpAppointment: "Cardiology Clinic in 10-14 days"
-  });
+  // If Gemini API could not process the request, throw an error instead of returning mock data
+  throw new Error("Clinical AI service temporarily unavailable. Please verify your connection or Gemini API key.");
 }
 
 // Authentication & Patient Identity Routes
@@ -205,24 +119,14 @@ app.put('/api/auth/profile', handleUpdateProfile);
 // 1b. Handwritten Prescription Recognition (Automate identification & recognition of handwritten text from image)
 app.post('/api/handwritten-ocr', upload.single('prescriptionImage'), async (req, res) => {
   try {
-    let fileData = null;
-    let sampleUsed = req.body.sampleUsed;
-
-    if (req.file) {
-      fileData = {
-        mimeType: req.file.mimetype,
-        base64: req.file.buffer.toString('base64')
-      };
-    } else if (sampleUsed) {
-      const samplePath = path.join(__dirname, '../client/public/sample_prescription.jpg');
-      if (fs.existsSync(samplePath)) {
-        const fileBuffer = fs.readFileSync(samplePath);
-        fileData = {
-          mimeType: 'image/jpeg',
-          base64: fileBuffer.toString('base64')
-        };
-      }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Please upload a prescription image to analyze.' });
     }
+
+    const fileData = {
+      mimeType: req.file.mimetype,
+      base64: req.file.buffer.toString('base64')
+    };
 
     const systemPrompt = `You are an automated Optical Character Recognition (OCR) and Handwritten Text Recognition (HTR) system specializing in physician handwriting identification and transcription, inspired by CRNN-CTC handwriting recognition pipelines.
 Your task is to accurately transcribe messy cursive medical handwriting from the prescription image into normal, clear, typed digital text.

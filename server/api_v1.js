@@ -32,150 +32,13 @@ function saveStore(filename, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
-// Initial clinical seed data
-const SEED_PATIENT = {
-  id: 'pat_sarah_01',
-  fullName: 'Sarah Jenkins',
-  dateOfBirth: '1992-04-15',
-  diagnosis: 'Acute Coronary Syndrome (NSTEMI) s/p LAD Drug-Eluting Stent',
-  hospitalName: 'St. Elizabeth Heart & Vascular Institute',
-  dischargeDate: '2026-10-19',
-  allergies: ['Penicillin (mild rash)', 'Sulfa drugs'],
-  bloodGroup: 'O+',
-  emergencyContact: 'David Jenkins (Spouse) - +1 (555) 019-9944',
-  preferredLang: 'en',
-  caregivers: [
-    {
-      id: 'cg_pooja_01',
-      name: 'Pooja Jenkins',
-      relationship: 'Daughter / Primary Caregiver',
-      accessLevel: 'FULL_ACCESS',
-      isApproved: true
-    },
-    {
-      id: 'cg_david_02',
-      name: 'David Jenkins',
-      relationship: 'Spouse / Caregiver',
-      accessLevel: 'FULL_ACCESS',
-      isApproved: true
-    }
-  ]
-};
-
-const SEED_MEDS = [
-  {
-    id: 'med_01',
-    patientId: 'pat_sarah_01',
-    name: 'Aspirin (Cardio)',
-    dosage: '81 mg',
-    frequency: 'Once daily with breakfast',
-    scheduleTimes: ['08:00 AM'],
-    slotName: 'Morning',
-    instructions: 'Take with food and full glass of water. Do not skip.',
-    criticalWarning: 'Essential antiplatelet for cardiac stent. Do not stop without cardiologist authorization.',
-    verificationStatus: 'VERIFIED',
-    isActive: true
-  },
-  {
-    id: 'med_02',
-    patientId: 'pat_sarah_01',
-    name: 'Ticagrelor (Brilinta)',
-    dosage: '90 mg',
-    frequency: 'Twice daily (12 hours apart)',
-    scheduleTimes: ['08:00 AM', '08:00 PM'],
-    slotName: 'Morning / Evening',
-    instructions: 'Take 1 tablet every 12 hours. Do not double dose if missed.',
-    criticalWarning: 'HIGH STENT THROMBOSIS RISK IF MISSED.',
-    verificationStatus: 'VERIFIED',
-    isActive: true
-  },
-  {
-    id: 'med_03',
-    patientId: 'pat_sarah_01',
-    name: 'Atorvastatin',
-    dosage: '80 mg',
-    frequency: 'Once daily at bedtime',
-    scheduleTimes: ['10:00 PM'],
-    slotName: 'Night',
-    instructions: 'Take at night. Avoid grapefruit juice.',
-    criticalWarning: 'Report any unexplained muscle pain or tenderness.',
-    verificationStatus: 'VERIFIED',
-    isActive: true
-  },
-  {
-    id: 'med_04',
-    patientId: 'pat_sarah_01',
-    name: 'Metoprolol Tartrate',
-    dosage: '25 mg',
-    frequency: 'Twice daily with meals',
-    scheduleTimes: ['08:00 AM', '08:00 PM'],
-    slotName: 'Morning / Evening',
-    instructions: 'Take with food. Monitor heart rate (hold if HR < 55).',
-    criticalWarning: 'Do NOT confuse with Metoprolol Succinate ER (24hr formulation).',
-    verificationStatus: 'VERIFIED',
-    isActive: true
-  }
-];
-
-const SEED_APPOINTMENTS = [
-  {
-    id: 'apt_01',
-    patientId: 'pat_sarah_01',
-    doctorName: 'Dr. Eleanor Vance, MD (Cardiologist)',
-    clinicName: 'St. Elizabeth Heart Center • Suite 402',
-    specialty: 'Post-Stent & Echo Evaluation',
-    appointmentDate: '2026-11-02T10:30:00.000Z',
-    preparationNote: 'Bring current medication list and 7-day blood pressure log.',
-    status: 'UPCOMING',
-    reminderEnabled: true
-  },
-  {
-    id: 'apt_02',
-    patientId: 'pat_sarah_01',
-    doctorName: 'Dr. Marcus Brody, MD (Surgical Team)',
-    clinicName: 'Memorial Hospital Outpatient Surgical Clinic',
-    specialty: 'Incision & Wound Healing Inspection',
-    appointmentDate: '2026-10-28T14:00:00.000Z',
-    preparationNote: 'Keep dressing clean and dry prior to examination.',
-    status: 'UPCOMING',
-    reminderEnabled: true
-  }
-];
-
-const SEED_NOTIFICATIONS = [
-  {
-    id: 'notif_01',
-    type: 'MEDICATION_REMINDER',
-    title: 'Medication Due: Aspirin 81mg',
-    message: 'Time for morning cardiac protection dose with breakfast.',
-    isRead: false,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'notif_02',
-    type: 'APPOINTMENT_REMINDER',
-    title: 'Upcoming Cardiology Follow-Up',
-    message: 'In 10 days with Dr. Eleanor Vance at St. Elizabeth Heart Center.',
-    isRead: false,
-    createdAt: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: 'notif_03',
-    type: 'CAREGIVER_UPDATE',
-    title: 'Caregiver Pooja Checked Dose',
-    message: 'Pooja verified morning medication adherence for Sarah Jenkins.',
-    isRead: true,
-    createdAt: new Date(Date.now() - 7200000).toISOString()
-  }
-];
-
-// Initialize default stores
-let patientsStore = getStore('v1_patients.json', [SEED_PATIENT]);
-let medsStore = getStore('v1_medications.json', SEED_MEDS);
+// Initialize default stores (empty stores without mock data)
+let patientsStore = getStore('v1_patients.json', []);
+let medsStore = getStore('v1_medications.json', []);
 let logsStore = getStore('v1_medication_logs.json', []);
-let appointmentsStore = getStore('v1_appointments.json', SEED_APPOINTMENTS);
+let appointmentsStore = getStore('v1_appointments.json', []);
 let recoveryStore = getStore('v1_recovery.json', []);
-let notificationsStore = getStore('v1_notifications.json', SEED_NOTIFICATIONS);
+let notificationsStore = getStore('v1_notifications.json', []);
 
 // -------------------------------------------------------------
 // 1. PATIENT PROFILES & CAREGIVERS
@@ -230,7 +93,7 @@ v1Router.post('/patients/:patientId/caregivers', (req, res) => {
 // 2. MEDICATIONS & DOSE LOGS
 // -------------------------------------------------------------
 v1Router.get('/patients/:patientId/medications', (req, res) => {
-  const meds = medsStore.filter(m => m.patientId === req.params.patientId || m.patientId === 'pat_sarah_01');
+  const meds = medsStore.filter(m => m.patientId === req.params.patientId);
   res.json({ success: true, data: meds });
 });
 

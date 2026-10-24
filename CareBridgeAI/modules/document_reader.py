@@ -9,26 +9,6 @@ from PIL import Image, ImageEnhance, ImageOps
 MAX_FILE_SIZE_MB = 10
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
 
-BENCHMARK_PRESCRIPTION_TEXT = """MEDICAL CENTRE
-824 14th Street, New York, NY 91743, USA
-DEA# GB 05455616 | LIC # 976269
-
-Patient: John Smith | Age: 34
-Address: 162 Example St, NY | Date: 09-11-2012
-Attending Physician: Dr. Steve Johnson
-----------------------------------------------------------------------
-Rx (Prescribed Medications):
-1. Betaloc 100mg: Take 1 tablet twice daily (BID) by mouth for blood pressure and heart rate control.
-2. Dorzolamidum 10mg: Take 1 tablet twice daily (BID) as directed.
-3. Cimetidine 50mg: Take 2 tablets three times daily (TID) after meals to reduce stomach acid.
-4. Oxprenolol 50mg: Take 1 tablet once daily (QD) for cardiovascular care.
-
-Refills & Care Advice:
-- Refill: 1 refill authorized (PRN / as needed).
-- Low sodium diet and routine daily blood pressure checks.
-- Follow up in 2 weeks with Dr. Steve Johnson or clinic physician.
-- 🚨 Emergency Warning: Seek immediate emergency medical care if experiencing severe chest pain, shortness of breath, or sudden dizziness."""
-
 def validate_uploaded_file(uploaded_file):
     """
     Validates file type and file size.
@@ -95,16 +75,9 @@ def preprocess_handwritten_image(image_bytes: bytes) -> bytes:
     except Exception:
         return image_bytes
 
-def detect_known_prescription_signatures(raw_text: str) -> bool:
-    """Detects if OCR output corresponds to known benchmark prescription templates."""
-    low = raw_text.lower()
-    matches = ["05455616", "976269", "medical centre", "824 14", "joba sarid", "g7 example", "162 example", "shutterstock", "wtx-n-presc-t", "steve johnson", "betaloc", "dorzolamidum"]
-    match_count = sum(1 for m in matches if m in low)
-    return match_count >= 2
-
 def extract_text_from_image(image_bytes):
     """
-    Extracts text from an image using OCR (Tesseract) with smart prescription pattern fallback.
+    Extracts text from an image using OCR (Tesseract).
     Returns: (text: str, success: bool, message: str)
     """
     try:
@@ -125,8 +98,6 @@ def extract_text_from_image(image_bytes):
         
         try:
             text = pytesseract.image_to_string(image).strip()
-            if detect_known_prescription_signatures(text):
-                return BENCHMARK_PRESCRIPTION_TEXT, True, "AI Prescription Decipherer: Detected doctor prescription with blue handwriting (John Smith - Betaloc / Cimetidine)."
             if not text:
                 return "", False, "OCR completed, but no text could be recognized in this image."
             return text, True, "Successfully extracted text using OCR."
@@ -147,20 +118,13 @@ def extract_handwriting_with_gemini_vision(image_bytes: bytes, api_key: str = No
     """
     key = api_key or os.getenv("GEMINI_API_KEY")
     if not key or key.strip() == "your_gemini_api_key_here":
-        # Check if known prescription before giving error
-        try:
-            text_result, ok, _ = extract_text_from_image(image_bytes)
-            if ok and detect_known_prescription_signatures(text_result):
-                return BENCHMARK_PRESCRIPTION_TEXT, True, "AI Vision Decipherer: Successfully deciphered doctor cursive prescription (John Smith - Betaloc / Cimetidine)."
-        except Exception:
-            pass
         return "", False, "A Gemini API Key is required for live AI Vision handwriting deciphering. Enter your key in the sidebar or upload page."
     
     try:
         enhanced_bytes = preprocess_handwritten_image(image_bytes)
         b64_image = base64.b64encode(enhanced_bytes).decode("utf-8")
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={key.strip()}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key.strip()}"
         
         prompt = """You are a senior clinical pharmacist and medical transcription specialist.
 Decipher this handwritten doctor's prescription or clinical note image with utmost care.
@@ -207,11 +171,4 @@ Format clearly in plain patient-friendly text with clear sections."""
             return "", False, "AI Vision completed but returned empty text."
         return text, True, "Successfully deciphered doctor handwriting with Gemini AI Vision!"
     except Exception as e:
-        # Fallback to smart prescription pattern matching
-        try:
-            text_result, ok, _ = extract_text_from_image(image_bytes)
-            if ok and detect_known_prescription_signatures(text_result):
-                return BENCHMARK_PRESCRIPTION_TEXT, True, "AI Vision Decipherer: Successfully deciphered doctor cursive prescription (John Smith - Betaloc / Cimetidine)."
-        except Exception:
-            pass
         return "", False, f"AI Vision error: {str(e)}"

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { API_BASE_URL } from '../utils/apiConfig';
 
-export default function HandwrittenOCRView() {
+export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPrescriptions, onNavigateToOverview }) {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('/sample_prescription.jpg');
-  const [isUsingSample, setIsUsingSample] = useState(true);
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
@@ -13,30 +12,23 @@ export default function HandwrittenOCRView() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      setIsUsingSample(false);
       setImagePreview(URL.createObjectURL(file));
       setResult(null);
     }
   };
 
-  const handleUseSample = () => {
-    setSelectedFile(null);
-    setIsUsingSample(true);
-    setImagePreview('/sample_prescription.jpg');
-    setResult(null);
-  };
-
   const handleRecognize = async () => {
+    if (!selectedFile) {
+      setError('Please select or upload a handwritten prescription image first.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
       const formData = new FormData();
-      if (selectedFile) {
-        formData.append('prescriptionImage', selectedFile);
-      } else if (isUsingSample) {
-        formData.append('sampleUsed', 'true');
-      }
+      formData.append('prescriptionImage', selectedFile);
 
       const response = await fetch(`${API_BASE_URL}/api/handwritten-ocr`, {
         method: 'POST',
@@ -46,6 +38,60 @@ export default function HandwrittenOCRView() {
       const resData = await response.json();
       if (resData.success && resData.data) {
         setResult(resData.data);
+
+        // Auto-save prescription to dashboard & portal
+        const medsList = (resData.data.medicationsList || []).map((m, idx) => ({
+          id: `med_${Date.now()}_${idx}`,
+          name: m.drugName || 'Medication',
+          dosage: m.dosage || 'As directed',
+          schedule: m.frequency || 'Daily',
+          instructions: m.instructions || 'Follow physician directions.',
+          critical: Boolean(m.caution)
+        }));
+
+        const newPrescription = {
+          id: `rx_${Date.now()}`,
+          title: "Doctor's Handwritten Prescription",
+          doctor: resData.data.detectedDoctor || 'Attending Physician',
+          clinic: resData.data.detectedClinic || 'Outpatient Clinic',
+          date: resData.data.prescriptionDate || new Date().toISOString().split('T')[0],
+          diagnosis: 'Physician Prescribed Treatment Course',
+          status: 'Active',
+          refill: '1 Refill Remaining (30-day supply)',
+          documentType: 'Handwritten Doctor Note (OCR & HTR)',
+          imagePreview: imagePreview || null,
+          medications: medsList,
+          dailyCareChecklist: [],
+          emergencyRedFlags: [],
+          notes: resData.data.normalizedDigitalText || 'Transcribed from physician handwritten prescription.'
+        };
+
+        const newChecklistMeds = medsList.map((m, idx) => ({
+          id: `chk_med_${Date.now()}_${idx}`,
+          title: `${m.name} ${m.dosage !== 'As directed' ? m.dosage : ''}`.trim(),
+          time: m.schedule?.toLowerCase().includes('night') || m.schedule?.toLowerCase().includes('evening') ? '08:00 PM' : '08:00 AM',
+          dose: m.dosage || '1 dose',
+          done: false,
+          alarmEnabled: true
+        }));
+
+        if (onSavePrescription) {
+          onSavePrescription(newPrescription, null, newChecklistMeds);
+        } else {
+          try {
+            const saved = localStorage.getItem('carebridge_portal_prescriptions');
+            const list = saved ? JSON.parse(saved) : [];
+            localStorage.setItem('carebridge_portal_prescriptions', JSON.stringify([newPrescription, ...list.filter(p => p.id !== newPrescription.id)]));
+
+            if (newChecklistMeds.length > 0) {
+              const savedMeds = localStorage.getItem('carebridge_meds_checklist');
+              const listMeds = savedMeds ? JSON.parse(savedMeds) : [];
+              localStorage.setItem('carebridge_meds_checklist', JSON.stringify([...newChecklistMeds, ...listMeds]));
+            }
+          } catch (err) {
+            console.error('Failed to save handwritten prescription to localStorage', err);
+          }
+        }
       } else {
         setError(resData.error || 'Failed to recognize handwritten prescription.');
       }
@@ -66,20 +112,26 @@ export default function HandwrittenOCRView() {
             <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--navy)' }}>
               📷 Doctor's Handwritten Prescription
             </span>
-            <button 
-              type="button" 
-              onClick={handleUseSample}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#4f46e5',
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                cursor: 'pointer'
-              }}
-            >
-              🔄 Reload Sample Note
-            </button>
+            {selectedFile && (
+              <button 
+                type="button" 
+                onClick={() => {
+                  setSelectedFile(null);
+                  setImagePreview(null);
+                  setResult(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#dc2626',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕ Clear
+              </button>
+            )}
           </div>
 
           <div 
@@ -120,8 +172,8 @@ export default function HandwrittenOCRView() {
           <button 
             className="btn-hero-launch" 
             onClick={handleRecognize} 
-            disabled={loading}
-            style={{ width: '100%', justifyContent: 'center', marginTop: '1.25rem', padding: '14px' }}
+            disabled={loading || !selectedFile}
+            style={{ width: '100%', justifyContent: 'center', marginTop: '1.25rem', padding: '14px', opacity: !selectedFile ? 0.6 : 1 }}
           >
             {loading ? '🧠 Recognizing Doctor Handwriting (CRNN Pipeline)...' : '⚡ Convert Handwritten Text to Normal'}
           </button>
@@ -147,10 +199,14 @@ export default function HandwrittenOCRView() {
                 Automated Handwriting Transcription Ready
               </h4>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: '440px', margin: '0.5rem auto 1.5rem auto' }}>
-                Click "Convert Handwritten Text to Normal" to transcribe the doctor's cursive handwriting into clean digital text and expand Latin medical abbreviations.
+                Upload a doctor's cursive prescription to transcribe it into clean digital text and expand Latin medical abbreviations.
               </p>
-              <button className="btn-signin-pill" onClick={handleRecognize} style={{ margin: '0 auto' }}>
-                ⚡ Transcribe Sample Prescription
+              <button 
+                className="btn-signin-pill" 
+                onClick={() => document.getElementById('handwritingFileInput').click()} 
+                style={{ margin: '0 auto' }}
+              >
+                📂 Choose Prescription Photo
               </button>
             </div>
           )}
@@ -169,6 +225,76 @@ export default function HandwrittenOCRView() {
 
           {result && (
             <div style={{ background: '#ffffff', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '2rem', boxShadow: 'var(--shadow-sm)' }}>
+              {/* Auto-save notification banner with quick navigation */}
+              <div style={{
+                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+                border: '1.5px solid #818cf8',
+                borderRadius: '12px',
+                padding: '1rem 1.25rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1.4rem' }}>🎉</span>
+                  <div>
+                    <strong style={{ color: '#1e1b4b', fontSize: '0.98rem', display: 'block' }}>
+                      Prescription &amp; Medications Successfully Activated!
+                    </strong>
+                    <span style={{ color: '#4338ca', fontSize: '0.8rem' }}>
+                      All extracted medications and instructions have been synced with your Patient Portal.
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {onNavigateToPrescriptions && (
+                    <button
+                      type="button"
+                      onClick={onNavigateToPrescriptions}
+                      style={{
+                        background: '#4f46e5',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        fontSize: '0.825rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <span>💊</span>
+                      <span>View in Prescriptions Tab →</span>
+                    </button>
+                  )}
+                  {onNavigateToOverview && (
+                    <button
+                      type="button"
+                      onClick={onNavigateToOverview}
+                      style={{
+                        background: '#ffffff',
+                        color: '#4338ca',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '8px',
+                        padding: '8px 14px',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <span>🏠</span>
+                      <span>Overview</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Header card with confidence score */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-light)' }}>
                 <div>
@@ -176,10 +302,10 @@ export default function HandwrittenOCRView() {
                     ✓ Converted to Normal Text ({result.confidenceScore || '96.4%'} Accuracy)
                   </span>
                   <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--navy)', marginTop: '6px' }}>
-                    {result.detectedClinic || 'St. Elizabeth Medical Clinic'}
+                    {result.detectedClinic || 'Clinical Center'}
                   </h4>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    Prescribing Physician: <strong>{result.detectedDoctor || 'Dr. Eleanor Vance, MD'}</strong>
+                    Prescribing Physician: <strong>{result.detectedDoctor || 'Physician'}</strong>
                   </div>
                 </div>
 

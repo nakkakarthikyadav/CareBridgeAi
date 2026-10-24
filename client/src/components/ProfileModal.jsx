@@ -128,27 +128,6 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
     }
   };
 
-  const handleQuickDemoLogin = () => {
-    setEmailOrPhone('sarah@carebridge.ai');
-    setPassword('password123');
-    setTimeout(() => {
-      const demoUser = {
-        id: 'demo-user-1',
-        name: 'Sarah Jenkins',
-        email: 'sarah@carebridge.ai',
-        phone: '+1 (555) 019-2834',
-        diagnosis: 'Acute Coronary Syndrome s/p LAD Stent Placement',
-        emergencyContact: 'Mark Jenkins (Spouse) - +1 555-019-9999',
-        isLoggedIn: true
-      };
-      setUserProfile(demoUser);
-      localStorage.setItem('carebridge_user', JSON.stringify(demoUser));
-      setToastMessage('Signed in as Demo Patient: Sarah Jenkins');
-      onClose();
-      if (onLoginSuccess) onLoginSuccess(demoUser);
-    }, 150);
-  };
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
@@ -324,21 +303,6 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
-
-            {/* Quick Demo Login Option */}
-            <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
-                Need a quick test?
-              </span>
-              <button 
-                type="button"
-                onClick={handleQuickDemoLogin}
-                className="btn-signin-pill"
-                style={{ width: '100%', justifyContent: 'center', fontSize: '0.825rem' }}
-              >
-                ⚡ 1-Click Demo Login (Sarah Jenkins)
-              </button>
-            </div>
           </form>
         )}
 

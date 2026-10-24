@@ -363,81 +363,6 @@ MEDICAL_GLOSSARY = {
     "refill": "Permission from your doctor to obtain an additional supply of medicine from the pharmacy without another appointment."
 }
 
-# Embedded Sample 1: Hospital Discharge Summary
-SAMPLE_DISCHARGE_TEXT = """ST. JUDE MEMORIAL HOSPITAL
-PATIENT DISCHARGE SUMMARY
-
-Patient: John Doe (Fictional) | Age: 68 | Admission Date: Oct 10, 2026 | Discharge Date: Oct 14, 2026
-Primary Diagnosis: Mild Congestive Heart Failure Exacerbation
-Attending Physician: Dr. Sarah Vance, MD
-------------------------------------------------------------------------------------------
-
-1. MEDICATIONS:
-- Lisinopril 10mg: Take 1 tablet by mouth every morning for blood pressure.
-- Furosemide 20mg: Take 1 tablet daily in the morning.
-- Take one capsule twice daily after meals (Medicine name unreadable on prescription).
-- Metoprolol Tartrate 25mg: Take 1 tablet twice daily with food.
-
-2. DIET & ACTIVITY:
-- Sodium restricted diet: Under 2,000 mg per day.
-- Daily morning weight check before breakfast. Report weight gain of >3 lbs in 24 hours.
-- Light walking as tolerated. No strenuous heavy lifting over 10 lbs.
-
-3. FOLLOW-UP APPOINTMENT:
-- Follow-up with Dr. Vance in Cardiology Clinic on Oct 24, 2026 at 10:30 AM.
-- Alternate clinic note mentions returning on Oct 21, 2026.
-
-4. WARNING SIGNS (RED FLAGS):
-- Sudden shortness of breath while resting.
-- Swelling in lower legs, ankles, or feet.
-- Chest pressure or pain: Call 911 immediately."""
-
-# Embedded Sample 2: Doctor Prescription (John Smith - Betaloc / Cimetidine / Oxprenolol)
-SAMPLE_PRESCRIPTION_JOHN_SMITH = """MEDICAL CENTRE
-824 14th Street, New York, NY 91743, USA
-DEA# GB 05455616 | LIC # 976269
-
-Patient: John Smith | Age: 34
-Address: 162 Example St, NY | Date: 09-11-2012
-Attending Physician: Dr. Steve Johnson
-----------------------------------------------------------------------
-Rx (Prescribed Medications):
-1. Betaloc 100mg: Take 1 tablet twice daily (BID) by mouth for blood pressure and heart rate control.
-2. Dorzolamidum 10mg: Take 1 tablet twice daily (BID) as directed.
-3. Cimetidine 50mg: Take 2 tablets three times daily (TID) after meals to reduce stomach acid.
-4. Oxprenolol 50mg: Take 1 tablet once daily (QD) for cardiovascular care.
-
-Refills & Care Advice:
-- Refill: 1 refill authorized (PRN / as needed).
-- Low sodium diet and routine daily blood pressure checks.
-- Follow up in 2 weeks with Dr. Steve Johnson or clinic physician.
-- 🚨 Emergency Warning: Seek immediate emergency medical care if experiencing severe chest pain, shortness of breath, or sudden dizziness."""
-
-# Embedded Sample 3: Cardiology Prescription (Rajesh Kumar - Ecosprin / Clopilet)
-SAMPLE_PRESCRIPTION_RAJESH_KUMAR = """CITY HEALTH CLINIC & CARDIOLOGY CARE
-Dr. A. K. Sharma, MD, DM (Cardiology) - Reg No: 54921
-Date: 14-Oct-2026 | Patient: Rajesh Kumar (Age: 52)
-------------------------------------------------------------
-Clinical Notes: Post angioplasty follow-up. Blood Pressure: 130/84 mmHg.
-
-Rx (Prescribed Medications):
-1. Tab. Ecosprin 75 mg - 1-0-0 (Once daily in morning after breakfast) x 1 month
-2. Tab. Clopilet 75 mg - 0-1-0 (Once daily in afternoon after lunch) x 1 month
-3. Tab. Atorva 40 mg - 0-0-1 (Once daily at night after dinner) x 1 month
-4. Tab. Metolar XR 25 mg - 1-0-0 (Once daily in morning) x 15 days
-5. Cap. Pantocid 40 mg - 1-0-0 (Once daily 30 minutes before breakfast) x 15 days
-6. Syrup [Illegible / Cursive handwriting - Needs confirmation] - 10ml TDS x 5 days
-
-Diet & Lifestyle Advice:
-- Strict low salt (< 2g/day) and low oil diet.
-- Light morning walk 20 minutes daily. Avoid heavy lifting (> 5 kg).
-- Daily blood pressure and pulse check.
-
-Follow-up & Emergency Instructions:
-- Follow-up visit with Dr. Sharma on 29-Oct-2026 at 11:00 AM.
-- Alternate note mentions returning on 25-Oct-2026.
-- 🚨 Emergency Warning: If severe chest tightness, sweating, or breathlessness occurs, report to emergency room immediately."""
-
 COUNTRY_CODES = {
     "🇮🇳 India (+91)": "+91",
     "🇺🇸 USA / Canada (+1)": "+1",
@@ -498,15 +423,8 @@ def preprocess_handwritten_image(image_bytes: bytes) -> bytes:
     except Exception:
         return image_bytes
 
-def detect_known_prescription_signatures(raw_text: str) -> bool:
-    """Identifies doctor prescription template signatures from OCR text."""
-    low = raw_text.lower()
-    matches = ["05455616", "976269", "medical centre", "824 14", "joba sarid", "g7 example", "162 example", "shutterstock", "wtx-n-presc-t", "steve johnson", "betaloc", "dorzolamidum"]
-    match_count = sum(1 for m in matches if m in low)
-    return match_count >= 2
-
 def extract_text_from_image(image_bytes):
-    """Extracts text using OCR with smart prescription deciphering fallback."""
+    """Extracts text using OCR."""
     try:
         import pytesseract
         
@@ -524,14 +442,10 @@ def extract_text_from_image(image_bytes):
         image = Image.open(io.BytesIO(image_bytes))
         try:
             text = pytesseract.image_to_string(image).strip()
-            if detect_known_prescription_signatures(text):
-                return SAMPLE_PRESCRIPTION_JOHN_SMITH, True, "AI Vision Decipherer: Detected doctor prescription with blue handwriting (John Smith - Betaloc / Cimetidine / Oxprenolol)."
             if not text:
                 return "", False, "OCR completed, but no text could be recognized in this image."
             return text, True, "Successfully extracted text using OCR."
         except Exception:
-            if len(image_bytes) > 200000:
-                return SAMPLE_PRESCRIPTION_JOHN_SMITH, True, "AI Vision Decipherer: Detected doctor prescription with blue handwriting (John Smith - Betaloc / Cimetidine / Oxprenolol)."
             return "", False, (
                 "Tesseract OCR is not installed on this cloud environment. "
                 "Use the AI Vision handwriting mode or paste the text directly into the editor below."
@@ -546,12 +460,6 @@ def extract_handwriting_with_gemini_vision(image_bytes: bytes, api_key: str = No
     """
     key = api_key or os.getenv("GEMINI_API_KEY")
     if not key or key.strip() == "your_gemini_api_key_here":
-        try:
-            text_result, ok, _ = extract_text_from_image(image_bytes)
-            if ok and detect_known_prescription_signatures(text_result):
-                return SAMPLE_PRESCRIPTION_JOHN_SMITH, True, "AI Vision Decipherer: Successfully deciphered doctor cursive prescription (John Smith - Betaloc / Cimetidine / Oxprenolol)."
-        except Exception:
-            pass
         return "", False, "A Gemini API Key is required for live AI Vision handwriting deciphering. Enter your key in the sidebar or upload page."
     
     try:
@@ -605,12 +513,6 @@ Format clearly in plain patient-friendly text with clear sections."""
             return "", False, "AI Vision completed but returned empty text."
         return text, True, "Successfully deciphered doctor handwriting with Gemini AI Vision!"
     except Exception as e:
-        try:
-            text_result, ok, _ = extract_text_from_image(image_bytes)
-            if ok and detect_known_prescription_signatures(text_result):
-                return SAMPLE_PRESCRIPTION_JOHN_SMITH, True, "AI Vision Decipherer: Successfully deciphered doctor cursive prescription (John Smith - Betaloc / Cimetidine / Oxprenolol)."
-        except Exception:
-            pass
         return "", False, f"AI Vision error: {str(e)}"
 
 # ==============================================================================
@@ -2211,40 +2113,17 @@ elif current_page == "📄 Upload & Review Document":
     st.title("📄 Upload & Review Medical Document")
     st.write("Upload a hospital discharge summary, clinical note, or doctor's handwritten prescription slip.")
 
-    upload_col, sample_col = st.columns([1.8, 1.2])
-    with upload_col:
-        doc_type_mode = st.radio(
-            "Document Processing Mode:",
-            ["✍️ Doctor Handwritten Prescription / Cursive Notes (AI Vision Enhanced)", "📄 Standard Printed Document (PDF/Typed)"],
-            horizontal=False
-        )
-        uploaded_file = st.file_uploader("Upload document or prescription (PDF, PNG, JPG, JPEG):", type=["pdf", "png", "jpg", "jpeg"], help=f"Max size: {MAX_FILE_SIZE_MB}MB.")
-        
-        with st.expander("🔑 Live AI Vision Gemini API Key (Optional)"):
-            st.caption("Enter a free Gemini API Key from [Google AI Studio](https://aistudio.google.com) to decipher any custom handwritten note.")
-            direct_key = st.text_input("Gemini API Key:", value=st.session_state.api_key if st.session_state.api_key != "your_gemini_api_key_here" else "", type="password", key="direct_gemini_key")
-            if direct_key != st.session_state.api_key: st.session_state.api_key = direct_key
+    doc_type_mode = st.radio(
+        "Document Processing Mode:",
+        ["✍️ Doctor Handwritten Prescription / Cursive Notes (AI Vision Enhanced)", "📄 Standard Printed Document (PDF/Typed)"],
+        horizontal=False
+    )
+    uploaded_file = st.file_uploader("Upload document or prescription (PDF, PNG, JPG, JPEG):", type=["pdf", "png", "jpg", "jpeg"], help=f"Max size: {MAX_FILE_SIZE_MB}MB.")
     
-    with sample_col:
-        st.markdown("**⚡ Instant 1-Click Test Data:**")
-        
-        if st.button("✍️ Load Doctor Prescription (John Smith — Betaloc / Cimetidine)", use_container_width=True, type="primary"):
-            st.session_state.extracted_text = SAMPLE_PRESCRIPTION_JOHN_SMITH
-            st.session_state.uploaded_filename = "doctor_prescription_john_smith.png"
-            st.toast("Doctor prescription loaded with 4 medications!", icon="✍️")
-            st.rerun()
-
-        if st.button("✍️ Load Cardiology Prescription (Rajesh Kumar — Ecosprin / Clopilet)", use_container_width=True):
-            st.session_state.extracted_text = SAMPLE_PRESCRIPTION_RAJESH_KUMAR
-            st.session_state.uploaded_filename = "cardiology_prescription_rajesh.jpg"
-            st.toast("Cardiology prescription loaded!", icon="✍️")
-            st.rerun()
-
-        if st.button("📁 Load Standard Discharge Summary (PDF)", use_container_width=True):
-            st.session_state.extracted_text = SAMPLE_DISCHARGE_TEXT
-            st.session_state.uploaded_filename = "hospital_discharge_summary.pdf"
-            st.toast("Standard hospital discharge summary loaded!", icon="📄")
-            st.rerun()
+    with st.expander("🔑 Live AI Vision Gemini API Key (Optional)"):
+        st.caption("Enter a free Gemini API Key from [Google AI Studio](https://aistudio.google.com) to decipher any custom handwritten note.")
+        direct_key = st.text_input("Gemini API Key:", value=st.session_state.api_key if st.session_state.api_key != "your_gemini_api_key_here" else "", type="password", key="direct_gemini_key")
+        if direct_key != st.session_state.api_key: st.session_state.api_key = direct_key
 
     if uploaded_file is not None:
         if uploaded_file.name != st.session_state.uploaded_filename:

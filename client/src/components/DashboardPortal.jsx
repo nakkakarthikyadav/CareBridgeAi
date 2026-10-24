@@ -31,118 +31,31 @@ export default function DashboardPortal({
   const [prescriptions, setPrescriptions] = useState(() => {
     try {
       const saved = localStorage.getItem('carebridge_portal_prescriptions');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [
-      {
-        id: 'rx_1',
-        title: 'Post-Stent Hospital Discharge Prescription',
-        doctor: 'Dr. Eleanor Vance, MD (Cardiologist)',
-        clinic: 'St. Elizabeth Heart Center • Suite 402',
-        date: '2026-10-19',
-        diagnosis: 'Acute Coronary Syndrome s/p LAD Stent Placement',
-        status: 'Active',
-        refill: '1 Refill Remaining (30-day supply)',
-        documentType: 'Handwritten Doctor Note (OCR Verified)',
-        imagePreview: '/sample_prescription.jpg',
-        medications: [
-          {
-            name: 'Aspirin (Cardio)',
-            dosage: '81 mg',
-            schedule: 'Once Daily (8:00 AM)',
-            instructions: 'Take with breakfast. Lifelong antiplatelet therapy to protect coronary stent.',
-            critical: false
-          },
-          {
-            name: 'Ticagrelor (Brilinta)',
-            dosage: '90 mg',
-            schedule: 'Twice Daily (8:00 AM & 8:00 PM)',
-            instructions: 'DO NOT MISS A DOSE. High stent thrombosis risk if abruptly stopped.',
-            critical: true
-          },
-          {
-            name: 'Atorvastatin',
-            dosage: '80 mg',
-            schedule: 'Once Daily (9:00 PM Bedtime)',
-            instructions: 'Take at bedtime. High-intensity plaque stabilization and lipid management.',
-            critical: false
-          },
-          {
-            name: 'Metoprolol Tartrate',
-            dosage: '25 mg',
-            schedule: 'Twice Daily (8:00 AM & 8:00 PM)',
-            instructions: 'Take with food. Monitor heart rate (<60 bpm consult MD). Do NOT confuse with Succinate ER.',
-            critical: false
-          }
-        ],
-        notes: 'Strict low-sodium cardiac diet. Avoid NSAIDs (ibuprofen) without cardiologist consultation.'
-      },
-      {
-        id: 'rx_2',
-        title: 'Surgical Wound & Post-Op Recovery Protocol',
-        doctor: 'Dr. Marcus Brody, MD (Surgical Team)',
-        clinic: 'Memorial Outpatient Surgical Center',
-        date: '2026-10-14',
-        diagnosis: 'Surgical Incision & Prophylaxis',
-        status: 'Active',
-        refill: 'Course Complete (Finish remaining antibiotic)',
-        documentType: 'Digital Outpatient Prescription',
-        imagePreview: null,
-        medications: [
-          {
-            name: 'Cephalexin (Keflex)',
-            dosage: '500 mg',
-            schedule: '4x Daily (6 AM, 12 PM, 6 PM, 10 PM)',
-            instructions: 'Finish entire 7-day antibiotic course even if feeling better.',
-            critical: false
-          },
-          {
-            name: 'Acetaminophen (Tylenol)',
-            dosage: '500 mg',
-            schedule: 'Every 6 hrs PRN (As needed for pain)',
-            instructions: 'Do not exceed 3,000 mg in 24 hours. Avoid alcohol.',
-            critical: false
-          }
-        ],
-        notes: 'Keep surgical incision dry for 48 hours. Inspect daily for redness or drainage.'
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Filter out legacy mock data
+        return parsed.filter(p => p.id !== 'rx_1' && p.id !== 'rx_2');
       }
-    ];
+    } catch {}
+    return [];
   });
 
   // Filter for prescriptions tab
   const [prescriptionFilter, setPrescriptionFilter] = useState('all'); // 'all' | 'active' | 'refills'
   const [previewModalRx, setPreviewModalRx] = useState(null);
+  const [showAddAnotherRx, setShowAddAnotherRx] = useState(false);
 
-  // Sample appointments for the follow-up step
+  // Appointments for the follow-up step
   const [appointments, setAppointments] = useState(() => {
     try {
       const saved = localStorage.getItem('carebridge_portal_appointments');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [
-      {
-        id: 'apt_1',
-        doctor: 'Dr. Eleanor Vance, MD (Cardiologist)',
-        clinic: 'St. Elizabeth Heart Center • Suite 402',
-        date: '2026-11-02',
-        time: '10:30 AM',
-        daysRemaining: 10,
-        specialty: 'Post-Stent & Echo Evaluation',
-        prepNotes: 'Bring current medication list and 7-day blood pressure log.',
-        alarmSet: false
-      },
-      {
-        id: 'apt_2',
-        doctor: 'Dr. Marcus Brody, MD (Surgical Team)',
-        clinic: 'Memorial Hospital Outpatient Surgical Clinic',
-        date: '2026-10-28',
-        time: '02:00 PM',
-        daysRemaining: 5,
-        specialty: 'Incision & Wound Healing Inspection',
-        prepNotes: 'Keep surgical dressing clean and dry prior to visit.',
-        alarmSet: true
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Filter out legacy mock data
+        return parsed.filter(a => a.id !== 'apt_1' && a.id !== 'apt_2');
       }
-    ];
+    } catch {}
+    return [];
   });
 
   // New appointment form state
@@ -165,20 +78,53 @@ export default function DashboardPortal({
   const [recoveryLogs, setRecoveryLogs] = useState(() => {
     try {
       const saved = localStorage.getItem('carebridge_portal_vitals_logs');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [
-      {
-        date: 'Today, 08:30 AM',
-        painLevel: 3,
-        temperature: '98.4°F',
-        bloodPressure: '122/78',
-        energyLevel: 'Good Mobility',
-        woundStatus: 'Clean & Healing',
-        status: 'Normal Healing'
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.filter(l => !(l.temperature === '98.4°F' && l.bloodPressure === '122/78'));
       }
-    ];
+    } catch {}
+    return [];
   });
+
+  const handleSavePrescription = (newRx, newApt = null, newMeds = []) => {
+    setPrescriptions(prev => {
+      const filtered = (prev || []).filter(p => p.id !== newRx.id);
+      const updated = [newRx, ...filtered];
+      try {
+        localStorage.setItem('carebridge_portal_prescriptions', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Failed to save prescriptions to localStorage', err);
+      }
+      return updated;
+    });
+
+    if (newApt) {
+      setAppointments(prev => {
+        const filtered = (prev || []).filter(a => a.id !== newApt.id);
+        const updated = [newApt, ...filtered];
+        try {
+          localStorage.setItem('carebridge_portal_appointments', JSON.stringify(updated));
+        } catch (err) {
+          console.error('Failed to save appointments to localStorage', err);
+        }
+        return updated;
+      });
+    }
+
+    if (newMeds && newMeds.length > 0) {
+      try {
+        const saved = localStorage.getItem('carebridge_meds_checklist');
+        const existing = saved ? JSON.parse(saved) : [];
+        const merged = [...newMeds, ...existing.filter(e => !newMeds.some(m => m.title === e.title))];
+        localStorage.setItem('carebridge_meds_checklist', JSON.stringify(merged));
+      } catch (err) {
+        console.error('Failed to sync checklist', err);
+      }
+    }
+
+    playMedicalChime();
+    setToastMessage(`✅ Prescription from ${newRx.doctor || 'Doctor'} uploaded and saved to your dashboard!`);
+  };
 
   const handleSignOut = () => {
     if (onSignOut) {
@@ -343,17 +289,15 @@ export default function DashboardPortal({
     setToastMessage(`📄 Exported prescription summary for ${rx.doctor}`);
   };
 
-  // Pipeline navigation items
+  // Pipeline navigation items (Prescription is handled once in Step 1, then other recovery steps)
   const sidebarItems = [
     { id: 'overview', icon: '📊', label: 'Recovery Overview', sub: 'Health status & tools' },
-    { id: 'prescriptions', icon: '💊', label: 'Latest Prescriptions', sub: 'Active meds & refills', badge: `${prescriptions.length} Active` },
-    { id: 'upload', icon: '📤', label: 'Upload Prescription', sub: 'Scan photo, note or PDF' },
-    { id: 'verify', icon: '🔍', label: 'Verify Medicines', sub: 'OCR & Latin check' },
-    { id: 'reminders', icon: '⏰', label: 'Dose Timetable', sub: 'Hourly alarms & chimes' },
-    { id: 'followup', icon: '📅', label: 'Schedule Follow-up', sub: 'Doctor checkups & dates' },
-    { id: 'recovery', icon: '📈', label: 'Track Recovery', sub: 'Pain & vitals roadmap' },
-    { id: 'diet', icon: '🥗', label: 'Diet & Nutrition', sub: 'Foods to eat & avoid' },
-    { id: 'confusion', icon: '⚠️', label: 'Confusion Guard', sub: 'LASA drug safety' }
+    { id: 'prescriptions', icon: '💊', label: '1. Prescriptions & Meds', sub: prescriptions.length > 0 ? `${prescriptions.length} Active Rx` : 'Upload once', badge: prescriptions.length > 0 ? `${prescriptions.length} Active` : null },
+    { id: 'reminders', icon: '⏰', label: '2. Dose Timetable', sub: 'Hourly alarms & chimes' },
+    { id: 'followup', icon: '📅', label: '3. Follow-up Visits', sub: 'Doctor checkups & dates', badge: appointments.length > 0 ? `${appointments.length} Scheduled` : null },
+    { id: 'recovery', icon: '📈', label: '4. Track Recovery', sub: 'Pain & vitals roadmap' },
+    { id: 'diet', icon: '🥗', label: '5. Diet & Nutrition', sub: 'Foods to eat & avoid' },
+    { id: 'confusion', icon: '⚠️', label: '6. Confusion Guard', sub: 'LASA drug safety' }
   ];
 
   const filteredPrescriptions = prescriptions.filter(rx => {
@@ -572,21 +516,20 @@ export default function DashboardPortal({
                     width: '100%',
                     padding: '9px 12px',
                     borderRadius: '12px',
-                    border: 'none',
-                    background: isActive ? '#eef2ff' : 'transparent',
-                    color: isActive ? '#4f46e5' : '#334155',
+                    border: isActive ? '1.5px solid #000000' : '1px solid transparent',
+                    background: isActive ? '#000000' : 'transparent',
+                    color: isActive ? '#ffffff' : '#000000',
                     fontWeight: isActive ? 800 : 600,
                     cursor: 'pointer',
                     textAlign: 'left',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isActive ? 'inset 3px 0 0 #4f46e5' : 'none'
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '1.15rem' }}>{item.icon}</span>
                     <div>
-                      <div style={{ fontSize: '0.84rem', lineHeight: 1.2 }}>{item.label}</div>
-                      <div style={{ fontSize: '0.69rem', color: isActive ? '#6366f1' : '#94a3b8', fontWeight: 500 }}>
+                      <div style={{ fontSize: '0.84rem', lineHeight: 1.2, color: isActive ? '#ffffff' : '#000000' }}>{item.label}</div>
+                      <div style={{ fontSize: '0.69rem', color: isActive ? '#e2e8f0' : '#64748b', fontWeight: 500 }}>
                         {item.sub}
                       </div>
                     </div>
@@ -594,8 +537,8 @@ export default function DashboardPortal({
 
                   {item.badge && (
                     <span style={{
-                      background: isActive ? '#c7d2fe' : '#f1f5f9',
-                      color: isActive ? '#3730a3' : '#475569',
+                      background: isActive ? '#ffffff' : '#f1f5f9',
+                      color: '#000000',
                       fontSize: '0.675rem',
                       fontWeight: 800,
                       padding: '2px 6px',
@@ -735,9 +678,9 @@ export default function DashboardPortal({
             }}>
               <div>
                 <span style={{
-                  background: '#eef2ff',
-                  color: '#4338ca',
-                  border: '1px solid #c7d2fe',
+                  background: '#ffffff',
+                  color: '#000000',
+                  border: '1.5px solid #000000',
                   padding: '4px 14px',
                   borderRadius: '9999px',
                   fontSize: '0.75rem',
@@ -745,12 +688,12 @@ export default function DashboardPortal({
                   letterSpacing: '0.5px',
                   display: 'inline-block'
                 }}>
-                  POST-DISCHARGE CLINICAL SAFETY PROTOCOL • DAY 3 OF 14
+                  POST-DISCHARGE CLINICAL SAFETY PROTOCOL • ACTIVE MONITORING
                 </span>
-                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '10px 0 6px 0', color: '#0f172a' }}>
-                  Welcome to CareBridge AI, <span style={{ color: '#4f46e5' }}>{userProfile?.name || 'Patient'}</span>!
+                <h2 style={{ fontSize: '1.75rem', fontWeight: 900, margin: '10px 0 6px 0', color: '#000000' }}>
+                  Welcome to CareBridge AI, <span>{userProfile?.name || 'Patient'}</span>!
                 </h2>
-                <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', maxWidth: '620px', lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: '0.95rem', color: '#111827', maxWidth: '620px', lineHeight: 1.6 }}>
                   CareBridge AI bridges the vulnerable transition from hospital to home. We decode doctor prescriptions, verify dangerous drug interactions, and schedule automated alarms so you never miss a dose.
                 </p>
               </div>
@@ -758,25 +701,27 @@ export default function DashboardPortal({
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => setActiveStep('upload')}
+                  onClick={() => {
+                    setShowAddAnotherRx(prescriptions.length === 0);
+                    setActiveStep('prescriptions');
+                  }}
                   style={{
-                    background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                    background: '#000000',
                     color: '#ffffff',
-                    border: 'none',
+                    border: '2px solid #000000',
                     borderRadius: '9999px',
                     padding: '11px 22px',
                     fontSize: '0.85rem',
                     fontWeight: 800,
                     cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(79, 70, 229, 0.28)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <span>📤</span>
-                  <span>Upload Prescription</span>
+                  <span>💊</span>
+                  <span>{prescriptions.length > 0 ? '1. Prescriptions & Meds' : '1. Upload Prescription'}</span>
                 </button>
 
                 <button
@@ -784,8 +729,8 @@ export default function DashboardPortal({
                   onClick={() => setActiveStep('reminders')}
                   style={{
                     background: '#ffffff',
-                    color: '#334155',
-                    border: '1.5px solid #cbd5e1',
+                    color: '#000000',
+                    border: '2px solid #000000',
                     borderRadius: '9999px',
                     padding: '11px 20px',
                     fontSize: '0.85rem',
@@ -798,7 +743,7 @@ export default function DashboardPortal({
                   }}
                 >
                   <span>⏰</span>
-                  <span>Dose Timetable &amp; Alarms</span>
+                  <span>2. Dose Timetable &amp; Alarms</span>
                 </button>
               </div>
             </div>
@@ -814,7 +759,7 @@ export default function DashboardPortal({
                 onClick={() => setActiveStep('prescriptions')}
                 style={{
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  border: '1.5px solid #000000',
                   borderRadius: 'var(--radius-xl)',
                   padding: '1.5rem',
                   boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
@@ -823,20 +768,27 @@ export default function DashboardPortal({
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#000000' }}>
                     Active Medications
                   </span>
                   <span style={{ fontSize: '1.2rem' }}>💊</span>
                 </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--navy)' }}>
-                  3 On Schedule
-                </div>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#4338ca', fontWeight: 600 }}>
-                  Aspirin 81mg, Clopidogrel 75mg, Atorvastatin 40mg
-                </p>
-                <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>✓</span> All verified via Clinical OCR
-                </div>
+                {(() => {
+                  const allMeds = prescriptions.flatMap(p => p.medications || []);
+                  return (
+                    <>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#000000' }}>
+                        {allMeds.length > 0 ? `${allMeds.length} On Schedule` : '0 Active'}
+                      </div>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#111827', fontWeight: 600 }}>
+                        {allMeds.length > 0 ? allMeds.slice(0, 3).map(m => m.name).join(', ') : 'No active prescriptions on file'}
+                      </p>
+                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#000000', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>{allMeds.length > 0 ? '✓' : 'ℹ️'}</span> {allMeds.length > 0 ? 'Verified via Clinical OCR' : 'Upload prescription to track doses'}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Metric 2: Next Dose */}
@@ -844,7 +796,7 @@ export default function DashboardPortal({
                 onClick={() => setActiveStep('reminders')}
                 style={{
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  border: '1.5px solid #000000',
                   borderRadius: 'var(--radius-xl)',
                   padding: '1.5rem',
                   boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
@@ -853,20 +805,28 @@ export default function DashboardPortal({
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#000000' }}>
                     Next Scheduled Dose
                   </span>
                   <span style={{ fontSize: '1.2rem' }}>⏰</span>
                 </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--navy)' }}>
-                  8:00 PM Tonight
-                </div>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-                  Clopidogrel (Plavix) 75mg • Evening with water
-                </p>
-                <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#4338ca', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>🔔</span> Web Audio chime alarms enabled
-                </div>
+                {(() => {
+                  const allMeds = prescriptions.flatMap(p => p.medications || []);
+                  const firstMed = allMeds[0];
+                  return (
+                    <>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#000000' }}>
+                        {firstMed ? (firstMed.schedule || 'Scheduled') : 'None Pending'}
+                      </div>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#111827' }}>
+                        {firstMed ? `${firstMed.name} ${firstMed.dosage ? `(${firstMed.dosage})` : ''}` : 'No upcoming dose alarms'}
+                      </p>
+                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#000000', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🔔</span> Web Audio chime alarms enabled
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Metric 3: Doctor Checkup */}
@@ -874,7 +834,7 @@ export default function DashboardPortal({
                 onClick={() => setActiveStep('followup')}
                 style={{
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  border: '1.5px solid #000000',
                   borderRadius: 'var(--radius-xl)',
                   padding: '1.5rem',
                   boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
@@ -883,20 +843,27 @@ export default function DashboardPortal({
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#000000' }}>
                     Post-Op Checkup
                   </span>
                   <span style={{ fontSize: '1.2rem' }}>📅</span>
                 </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--navy)' }}>
-                  Nov 02 (in 10 days)
-                </div>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-                  Dr. Eleanor Vance • Cardiology Follow-up
-                </p>
-                <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#0284c7', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>📍</span> St. Elizabeth Heart Center
-                </div>
+                {(() => {
+                  const firstApt = appointments && appointments.length > 0 ? appointments[0] : null;
+                  return (
+                    <>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#000000' }}>
+                        {firstApt ? `${firstApt.date} (in ${firstApt.daysRemaining || 0}d)` : 'None Scheduled'}
+                      </div>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#111827' }}>
+                        {firstApt ? `${firstApt.doctor} • ${firstApt.specialty || 'Follow-up'}` : 'No upcoming doctor visits'}
+                      </p>
+                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#000000', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>📍</span> {firstApt?.clinic || 'Add checkup in Schedule Follow-up'}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -910,9 +877,9 @@ export default function DashboardPortal({
             }}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <span style={{
-                  background: '#eef2ff',
-                  color: '#4338ca',
-                  border: '1px solid #c7d2fe',
+                  background: '#ffffff',
+                  color: '#000000',
+                  border: '1.5px solid #000000',
                   fontSize: '0.75rem',
                   fontWeight: 800,
                   padding: '3px 10px',
@@ -921,10 +888,10 @@ export default function DashboardPortal({
                 }}>
                   CAREBRIDGE AI PLATFORM SERVICES
                 </span>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--navy)', margin: '8px 0 4px 0' }}>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#000000', margin: '8px 0 4px 0' }}>
                   Everything you need for safe recovery at home
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+                <p style={{ fontSize: '0.85rem', color: '#111827', margin: 0 }}>
                   Select any tool below or use the sidebar navigation to manage your recovery journey.
                 </p>
               </div>
@@ -936,12 +903,15 @@ export default function DashboardPortal({
               }}>
                 {/* Tool 1 */}
                 <div 
-                  onClick={() => setActiveStep('upload')}
+                  onClick={() => {
+                    setShowAddAnotherRx(false);
+                    setActiveStep('prescriptions');
+                  }}
                   style={{
-                    border: '1px solid #e2e8f0',
+                    border: '1.5px solid #000000',
                     borderRadius: 'var(--radius-lg)',
                     padding: '1.25rem',
-                    background: '#f8fafc',
+                    background: '#ffffff',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
@@ -950,16 +920,16 @@ export default function DashboardPortal({
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>📄</div>
-                    <strong style={{ fontSize: '1rem', color: 'var(--navy)', display: 'block', marginBottom: '4px' }}>
-                      Handwritten OCR &amp; Decoder
+                    <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>💊</div>
+                    <strong style={{ fontSize: '1rem', color: '#000000', display: 'block', marginBottom: '4px' }}>
+                      Step 1: Prescriptions &amp; Meds
                     </strong>
-                    <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.4, margin: 0 }}>
-                      Upload prescription photos or hospital discharge summaries. Our clinical OCR translates doctor handwriting and expands Latin medical abbreviations.
+                    <p style={{ fontSize: '0.82rem', color: '#111827', lineHeight: 1.4, margin: 0 }}>
+                      Upload prescription photos or hospital discharge summaries. Our clinical OCR translates doctor handwriting and extracts verified medications.
                     </p>
                   </div>
-                  <div style={{ marginTop: '1rem', color: '#4f46e5', fontSize: '0.82rem', fontWeight: 800 }}>
-                    Upload or Scan &rarr;
+                  <div style={{ marginTop: '1rem', color: '#000000', fontSize: '0.82rem', fontWeight: 900 }}>
+                    {prescriptions.length > 0 ? `View ${prescriptions.length} Prescriptions →` : 'Upload Prescription Scan →'}
                   </div>
                 </div>
 
@@ -967,10 +937,10 @@ export default function DashboardPortal({
                 <div 
                   onClick={() => setActiveStep('confusion')}
                   style={{
-                    border: '1px solid #e2e8f0',
+                    border: '1.5px solid #000000',
                     borderRadius: 'var(--radius-lg)',
                     padding: '1.25rem',
-                    background: '#f8fafc',
+                    background: '#ffffff',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
@@ -980,14 +950,14 @@ export default function DashboardPortal({
                 >
                   <div>
                     <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>🛡️</div>
-                    <strong style={{ fontSize: '1rem', color: 'var(--navy)', display: 'block', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '1rem', color: '#000000', display: 'block', marginBottom: '4px' }}>
                       Confusion Guard (LASA Safety)
                     </strong>
-                    <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.4, margin: 0 }}>
+                    <p style={{ fontSize: '0.82rem', color: '#111827', lineHeight: 1.4, margin: 0 }}>
                       Screen medications for dangerous Look-Alike / Sound-Alike errors (e.g. Metoprolol vs Hydralazine) and detect adverse drug-drug conflicts.
                     </p>
                   </div>
-                  <div style={{ marginTop: '1rem', color: '#4f46e5', fontSize: '0.82rem', fontWeight: 800 }}>
+                  <div style={{ marginTop: '1rem', color: '#000000', fontSize: '0.82rem', fontWeight: 900 }}>
                     Check Drug Safety &rarr;
                   </div>
                 </div>
@@ -996,10 +966,10 @@ export default function DashboardPortal({
                 <div 
                   onClick={() => setActiveStep('diet')}
                   style={{
-                    border: '1px solid #e2e8f0',
+                    border: '1.5px solid #000000',
                     borderRadius: 'var(--radius-lg)',
                     padding: '1.25rem',
-                    background: '#f8fafc',
+                    background: '#ffffff',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
@@ -1009,14 +979,14 @@ export default function DashboardPortal({
                 >
                   <div>
                     <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>🥗</div>
-                    <strong style={{ fontSize: '1rem', color: 'var(--navy)', display: 'block', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '1rem', color: '#000000', display: 'block', marginBottom: '4px' }}>
                       Clinical Recovery Diet
                     </strong>
-                    <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.4, margin: 0 }}>
+                    <p style={{ fontSize: '0.82rem', color: '#111827', lineHeight: 1.4, margin: 0 }}>
                       Personalized dietary plans tailored to your specific surgery or cardiac stent to support tissue repair and prevent food-drug interactions.
                     </p>
                   </div>
-                  <div style={{ marginTop: '1rem', color: '#4f46e5', fontSize: '0.82rem', fontWeight: 800 }}>
+                  <div style={{ marginTop: '1rem', color: '#000000', fontSize: '0.82rem', fontWeight: 900 }}>
                     Generate Diet Plan &rarr;
                   </div>
                 </div>
@@ -1033,10 +1003,10 @@ export default function DashboardPortal({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--navy)', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#000000', margin: 0 }}>
                     💊 Latest Prescriptions On File ({prescriptions.length})
                   </h3>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 0 0' }}>
+                  <p style={{ fontSize: '0.85rem', color: '#111827', margin: '4px 0 0 0' }}>
                     Your active physician prescriptions and medication dosages parsed by clinical OCR.
                   </p>
                 </div>
@@ -1046,13 +1016,13 @@ export default function DashboardPortal({
                     type="button"
                     onClick={() => setActiveStep('prescriptions')}
                     style={{
-                      background: '#eef2ff',
-                      color: '#4f46e5',
-                      border: '1px solid #c7d2fe',
+                      background: '#ffffff',
+                      color: '#000000',
+                      border: '1.5px solid #000000',
                       borderRadius: 'var(--radius-md)',
                       padding: '8px 16px',
                       fontSize: '0.8rem',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       cursor: 'pointer'
                     }}
                   >
@@ -1061,40 +1031,43 @@ export default function DashboardPortal({
 
                   <button
                     type="button"
-                    onClick={() => setActiveStep('upload')}
+                    onClick={() => {
+                      setShowAddAnotherRx(true);
+                      setActiveStep('prescriptions');
+                    }}
                     style={{
-                      background: '#4f46e5',
+                      background: '#000000',
                       color: '#ffffff',
-                      border: 'none',
+                      border: '1.5px solid #000000',
                       borderRadius: 'var(--radius-md)',
                       padding: '8px 16px',
                       fontSize: '0.8rem',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       cursor: 'pointer'
                     }}
                   >
-                    + Upload New Scan
+                    + Add Prescription
                   </button>
                 </div>
               </div>
 
-              {/* Showcase the top prescription */}
-              {prescriptions[0] && (
+              {/* Showcase the top prescription or friendly empty state */}
+              {prescriptions[0] ? (
                 <div style={{
-                  border: '1px solid #e2e8f0',
+                  border: '1.5px solid #000000',
                   borderRadius: 'var(--radius-lg)',
                   padding: '1.5rem',
-                  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+                  background: '#ffffff'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '1rem' }}>
                     <div>
-                      <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#4f46e5', background: '#eef2ff', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #c7d2fe' }}>
+                      <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#000000', background: '#ffffff', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #000000' }}>
                         ✓ {prescriptions[0].status} • Issued {prescriptions[0].date}
                       </span>
-                      <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
+                      <h4 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#000000', margin: '6px 0 2px 0' }}>
                         {prescriptions[0].title}
                       </h4>
-                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#111827' }}>
                         Prescribed by <strong>{prescriptions[0].doctor}</strong> • {prescriptions[0].clinic}
                       </div>
                     </div>
@@ -1102,7 +1075,7 @@ export default function DashboardPortal({
                     <button
                       type="button"
                       onClick={() => handlePrintPrescription(prescriptions[0])}
-                      style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', borderRadius: 'var(--radius-sm)', padding: '6px 12px', fontSize: '0.775rem', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ background: '#ffffff', border: '1px solid #000000', color: '#000000', borderRadius: 'var(--radius-sm)', padding: '6px 12px', fontSize: '0.775rem', fontWeight: 800, cursor: 'pointer' }}
                     >
                       📄 Download Summary (.txt)
                     </button>
@@ -1110,39 +1083,66 @@ export default function DashboardPortal({
 
                   {/* Medications badges */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
-                    {prescriptions[0].medications.map((m, idx) => (
+                    {(prescriptions[0].medications || []).map((m, idx) => (
                       <div key={idx} style={{
                         background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderLeft: m.critical ? '4px solid #ef4444' : '4px solid #4f46e5',
+                        border: '1.5px solid #000000',
                         borderRadius: 'var(--radius-sm)',
                         padding: '10px 12px'
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ color: 'var(--navy)', fontSize: '0.9rem' }}>{m.name}</strong>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4f46e5', background: '#eef2ff', padding: '2px 6px', borderRadius: '4px' }}>
+                          <strong style={{ color: '#000000', fontSize: '0.9rem' }}>{m.name}</strong>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', background: '#ffffff', border: '1px solid #000000', padding: '2px 6px', borderRadius: '4px' }}>
                             {m.dosage}
                           </span>
                         </div>
-                        <div style={{ fontSize: '0.775rem', color: '#64748b', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.775rem', color: '#111827', marginTop: '2px' }}>
                           {m.schedule}
                         </div>
                         {m.critical && (
-                          <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 700, display: 'block', marginTop: '4px' }}>
-                            ⚠️ Do NOT miss doses
+                          <span style={{ fontSize: '0.7rem', color: '#000000', fontWeight: 800, display: 'block', marginTop: '4px' }}>
+                            [CRITICAL] Do NOT miss doses
                           </span>
                         )}
                       </div>
                     ))}
                   </div>
                 </div>
+              ) : (
+                <div style={{
+                  border: '2px dashed #cbd5e1',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '2.5rem 1.5rem',
+                  textAlign: 'center',
+                  background: '#f8fafc'
+                }}>
+                  <span style={{ fontSize: '2.2rem' }}>📄</span>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)', margin: '8px 0 4px 0' }}>
+                    No Prescriptions Uploaded Yet
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '440px', margin: '0 auto 1.25rem auto' }}>
+                    Upload a smartphone photo of your doctor's handwritten prescription or hospital discharge summary. Our AI will automatically decode medication names, schedules, and safety warnings.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddAnotherRx(false);
+                      setActiveStep('prescriptions');
+                    }}
+                    className="btn-hero-launch"
+                    style={{ margin: '0 auto', padding: '9px 20px', fontSize: '0.825rem' }}
+                  >
+                    <span>📤 Upload Prescription (Step 1)</span>
+                    <span>→</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
         )}
 
-        {/* 2. LATEST PRESCRIPTIONS TAB */}
-        {activeStep === 'prescriptions' && (
+        {/* STEP 1: PRESCRIPTIONS & MEDICATIONS (Handled once) */}
+        {(activeStep === 'prescriptions' || activeStep === 'upload' || activeStep === 'verify') && (
           <div>
             <div style={{
               background: '#ffffff',
@@ -1162,102 +1162,147 @@ export default function DashboardPortal({
                     padding: '3px 10px',
                     borderRadius: '9999px'
                   }}>
-                    Medical Records
+                    Step 1 of 6
                   </span>
                   <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    Your Latest Prescriptions &amp; Active Medications
+                    {prescriptions.length === 0 || showAddAnotherRx
+                      ? "1. Upload Prescription / Hospital Discharge Summary"
+                      : "1. Prescriptions & Active Medications"}
                   </h2>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-                    All doctor prescriptions recognized from handwritten scans, outpatient notes, and hospital discharge summaries.
+                    {prescriptions.length === 0 || showAddAnotherRx
+                      ? "Upload doctor's cursive prescription or hospital discharge summary once. All medications, dosages, and schedules will be automatically decoded."
+                      : "Review your verified medications, check dosages, and proceed to daily dose timetable & alarms."}
                   </p>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveStep('upload')}
-                    style={{
-                      background: '#ffffff',
-                      color: '#4f46e5',
-                      border: '1.5px solid #c7d2fe',
-                      borderRadius: '9999px',
-                      padding: '8px 16px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <span>📤</span>
-                    <span>Upload New Scan</span>
-                  </button>
+                  {prescriptions.length > 0 && showAddAnotherRx && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddAnotherRx(false)}
+                      style={{
+                        background: '#f8fafc',
+                        color: '#475569',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '9999px',
+                        padding: '8px 16px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ← Back to Prescriptions ({prescriptions.length})
+                    </button>
+                  )}
+                  {prescriptions.length > 0 && !showAddAnotherRx && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddAnotherRx(true)}
+                      style={{
+                        background: '#ffffff',
+                        color: '#4f46e5',
+                        border: '1.5px solid #c7d2fe',
+                        borderRadius: '9999px',
+                        padding: '8px 16px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <span>➕</span>
+                      <span>Add Another Prescription</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Filters row */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setPrescriptionFilter('all')}
-                  style={{
-                    background: prescriptionFilter === 'all' ? '#4f46e5' : '#f8fafc',
-                    color: prescriptionFilter === 'all' ? '#ffffff' : '#475569',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '9999px',
-                    padding: '6px 14px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  All Prescriptions ({prescriptions.length})
-                </button>
+              {(prescriptions.length === 0 || showAddAnotherRx) ? (
+                /* Single unified upload workspace when no prescriptions exist or adding another */
+                <div>
+                  <DocumentAnalysisView 
+                    onSavePrescription={(newRx, newApt, newMeds) => {
+                      handleSavePrescription(newRx, newApt, newMeds);
+                      setShowAddAnotherRx(false);
+                      setActiveStep('prescriptions');
+                    }}
+                    onNavigateToPrescriptions={() => {
+                      setShowAddAnotherRx(false);
+                      setActiveStep('prescriptions');
+                    }}
+                    onNavigateToOverview={() => setActiveStep('overview')}
+                    onNavigateToStep={(step) => {
+                      setShowAddAnotherRx(false);
+                      setActiveStep(step);
+                    }}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* Filters row (Black and White) */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', borderBottom: '1.5px solid #000000', paddingBottom: '1rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setPrescriptionFilter('all')}
+                      style={{
+                        background: prescriptionFilter === 'all' ? '#000000' : '#ffffff',
+                        color: prescriptionFilter === 'all' ? '#ffffff' : '#000000',
+                        border: '1.5px solid #000000',
+                        borderRadius: '9999px',
+                        padding: '6px 14px',
+                        fontSize: '0.8rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      All Prescriptions ({prescriptions.length})
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setPrescriptionFilter('active')}
-                  style={{
-                    background: prescriptionFilter === 'active' ? '#4f46e5' : '#f8fafc',
-                    color: prescriptionFilter === 'active' ? '#ffffff' : '#475569',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '9999px',
-                    padding: '6px 14px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Active Courses ({prescriptions.filter(p => p.status === 'Active').length})
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrescriptionFilter('active')}
+                      style={{
+                        background: prescriptionFilter === 'active' ? '#000000' : '#ffffff',
+                        color: prescriptionFilter === 'active' ? '#ffffff' : '#000000',
+                        border: '1.5px solid #000000',
+                        borderRadius: '9999px',
+                        padding: '6px 14px',
+                        fontSize: '0.8rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Active Courses ({prescriptions.filter(p => p.status === 'Active').length})
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setPrescriptionFilter('refills')}
-                  style={{
-                    background: prescriptionFilter === 'refills' ? '#4f46e5' : '#f8fafc',
-                    color: prescriptionFilter === 'refills' ? '#ffffff' : '#475569',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '9999px',
-                    padding: '6px 14px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Refills Available
-                </button>
-              </div>
+                    <button
+                      type="button"
+                      onClick={() => setPrescriptionFilter('refills')}
+                      style={{
+                        background: prescriptionFilter === 'refills' ? '#000000' : '#ffffff',
+                        color: prescriptionFilter === 'refills' ? '#ffffff' : '#000000',
+                        border: '1.5px solid #000000',
+                        borderRadius: '9999px',
+                        padding: '6px 14px',
+                        fontSize: '0.8rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Refills Available
+                    </button>
+                  </div>
 
-              {/* Prescriptions List Cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {filteredPrescriptions.map((rx) => (
+                  {/* Prescriptions List Cards */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {filteredPrescriptions.map((rx) => (
                   <div
                     key={rx.id}
                     style={{
-                      border: '1px solid #e2e8f0',
+                      border: '2px solid #000000',
                       borderRadius: 'var(--radius-lg)',
                       padding: '1.75rem',
                       background: '#ffffff',
@@ -1265,43 +1310,44 @@ export default function DashboardPortal({
                     }}
                   >
                     {/* Prescription Top Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '1.25rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{
-                            background: '#eef2ff',
-                            color: '#4f46e5',
+                            background: '#ffffff',
+                            color: '#000000',
                             fontSize: '0.75rem',
                             fontWeight: 800,
                             padding: '3px 10px',
                             borderRadius: '9999px',
-                            border: '1px solid #c7d2fe'
+                            border: '1.5px solid #000000'
                           }}>
                             ✓ {rx.status}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                          <span style={{ fontSize: '0.8rem', color: '#111827' }}>
                             📅 Prescribed: <strong>{rx.date}</strong>
                           </span>
                           <span style={{
-                            background: '#e0e7ff',
-                            color: '#4338ca',
+                            background: '#f1f5f9',
+                            color: '#000000',
                             fontSize: '0.725rem',
-                            fontWeight: 700,
+                            fontWeight: 800,
                             padding: '2px 8px',
-                            borderRadius: '4px'
+                            borderRadius: '4px',
+                            border: '1px solid #000000'
                           }}>
                             {rx.documentType}
                           </span>
                         </div>
 
-                        <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--navy)', margin: '8px 0 4px 0' }}>
+                        <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#000000', margin: '8px 0 4px 0' }}>
                           {rx.title}
                         </h3>
 
-                        <div style={{ fontSize: '0.875rem', color: '#475569' }}>
+                        <div style={{ fontSize: '0.875rem', color: '#111827' }}>
                           Prescribing Physician: <strong>{rx.doctor}</strong> • 📍 {rx.clinic}
                         </div>
-                        <div style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.825rem', color: '#111827', marginTop: '2px' }}>
                           Diagnosis / Indication: <strong>{rx.diagnosis}</strong> • Refill: <strong>{rx.refill}</strong>
                         </div>
                       </div>
@@ -1313,13 +1359,13 @@ export default function DashboardPortal({
                             type="button"
                             onClick={() => setPreviewModalRx(rx)}
                             style={{
-                              background: '#f8fafc',
-                              border: '1px solid #cbd5e1',
-                              color: '#334155',
+                              background: '#ffffff',
+                              border: '1.5px solid #000000',
+                              color: '#000000',
                               borderRadius: 'var(--radius-sm)',
                               padding: '8px 14px',
                               fontSize: '0.8rem',
-                              fontWeight: 700,
+                              fontWeight: 800,
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
@@ -1336,12 +1382,12 @@ export default function DashboardPortal({
                           onClick={() => handlePrintPrescription(rx)}
                           style={{
                             background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            color: '#334155',
+                            border: '1.5px solid #000000',
+                            color: '#000000',
                             borderRadius: 'var(--radius-sm)',
                             padding: '8px 14px',
                             fontSize: '0.8rem',
-                            fontWeight: 700,
+                            fontWeight: 800,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -1356,7 +1402,7 @@ export default function DashboardPortal({
 
                     {/* Prescribed Medications Grid */}
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', color: '#000000', letterSpacing: '0.5px', marginBottom: '8px' }}>
                         Active Prescribed Medications ({rx.medications.length})
                       </div>
 
@@ -1365,50 +1411,51 @@ export default function DashboardPortal({
                           <div
                             key={idx}
                             style={{
-                              background: '#f8fafc',
-                              border: `1px solid ${med.critical ? '#fecaca' : '#e2e8f0'}`,
-                              borderLeft: `4px solid ${med.critical ? '#ef4444' : '#4f46e5'}`,
+                              background: '#ffffff',
+                              border: '1.5px solid #000000',
                               borderRadius: 'var(--radius-md)',
                               padding: '12px 14px'
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <strong style={{ fontSize: '0.95rem', color: 'var(--navy)' }}>{med.name}</strong>
+                              <strong style={{ fontSize: '0.95rem', color: '#000000' }}>{med.name}</strong>
                               <span style={{
-                                background: '#eef2ff',
-                                color: '#4f46e5',
+                                background: '#f1f5f9',
+                                color: '#000000',
                                 fontSize: '0.75rem',
                                 fontWeight: 800,
                                 padding: '2px 8px',
-                                borderRadius: '4px'
+                                borderRadius: '4px',
+                                border: '1px solid #000000'
                               }}>
                                 {med.dosage}
                               </span>
                             </div>
 
-                            <div style={{ fontSize: '0.8rem', color: '#4338ca', fontWeight: 700, marginBottom: '4px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#000000', fontWeight: 800, marginBottom: '4px' }}>
                               ⏰ {med.schedule}
                             </div>
 
-                            <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.4 }}>
+                            <div style={{ fontSize: '0.8rem', color: '#111827', lineHeight: 1.4 }}>
                               {med.instructions}
                             </div>
 
                             {med.critical && (
                               <div style={{
                                 marginTop: '6px',
-                                background: '#fef2f2',
-                                color: '#dc2626',
+                                background: '#ffffff',
+                                border: '2px solid #000000',
+                                color: '#000000',
                                 fontSize: '0.725rem',
-                                fontWeight: 800,
-                                padding: '3px 8px',
+                                fontWeight: 900,
+                                padding: '4px 8px',
                                 borderRadius: '4px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px'
                               }}>
-                                <span>⚠️ Critical:</span>
-                                <span>Do not miss doses. Risk of stent thrombosis.</span>
+                                <span>⚠️ CRITICAL:</span>
+                                <span>Do not miss doses. Risk of adverse complications.</span>
                               </div>
                             )}
                           </div>
@@ -1419,12 +1466,12 @@ export default function DashboardPortal({
                     {/* Physician Notes & Precautions */}
                     {rx.notes && (
                       <div style={{
-                        background: '#fffbeb',
-                        border: '1px solid #fde68a',
+                        background: '#ffffff',
+                        border: '1.5px solid #000000',
                         borderRadius: 'var(--radius-md)',
                         padding: '10px 14px',
                         fontSize: '0.825rem',
-                        color: '#92400e',
+                        color: '#000000',
                         marginBottom: '1rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -1436,7 +1483,7 @@ export default function DashboardPortal({
                     )}
 
                     {/* Action buttons on card footer */}
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
                       <button
                         type="button"
                         onClick={() => {
@@ -1445,13 +1492,13 @@ export default function DashboardPortal({
                           setActiveStep('reminders');
                         }}
                         style={{
-                          background: '#eef2ff',
-                          border: '1px solid #c7d2fe',
-                          color: '#4f46e5',
+                          background: '#000000',
+                          border: '2px solid #000000',
+                          color: '#ffffff',
                           borderRadius: 'var(--radius-sm)',
-                          padding: '6px 14px',
+                          padding: '8px 16px',
                           fontSize: '0.8rem',
-                          fontWeight: 700,
+                          fontWeight: 800,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -1459,28 +1506,7 @@ export default function DashboardPortal({
                         }}
                       >
                         <span>⏰</span>
-                        <span>Arm Dose Alarms for this Prescription</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveStep('verify')}
-                        style={{
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          color: '#475569',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '6px 14px',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <span>🔍</span>
-                        <span>Verify OCR Transcription</span>
+                        <span>Arm Dose Alarms (Step 2)</span>
                       </button>
 
                       <button
@@ -1488,12 +1514,12 @@ export default function DashboardPortal({
                         onClick={() => setActiveStep('confusion')}
                         style={{
                           background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          color: '#475569',
+                          border: '1.5px solid #000000',
+                          color: '#000000',
                           borderRadius: 'var(--radius-sm)',
-                          padding: '6px 14px',
+                          padding: '8px 16px',
                           fontSize: '0.8rem',
-                          fontWeight: 700,
+                          fontWeight: 800,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -1509,163 +1535,72 @@ export default function DashboardPortal({
                 ))}
               </div>
 
-              {/* Upload CTA box */}
-              <div style={{
-                marginTop: '2rem',
-                border: '2px dashed #cbd5e1',
-                borderRadius: 'var(--radius-xl)',
-                padding: '2rem',
-                textAlign: 'center',
-                background: '#f8fafc'
-              }}>
-                <span style={{ fontSize: '2.5rem' }}>📄</span>
-                <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--navy)', margin: '8px 0 4px 0' }}>
-                  Have another prescription or hospital discharge summary?
-                </h4>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '480px', margin: '0 auto 1.25rem auto' }}>
-                  Upload a smartphone photo of doctor's cursive handwriting or PDF hospital report. It will automatically be decoded and saved here.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveStep('upload')}
-                  style={{
-                    background: '#4f46e5',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '9999px',
-                    padding: '10px 24px',
-                    fontSize: '0.85rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)'
-                  }}
-                >
-                  📤 Upload Prescription Now
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* 3. STEP 1: UPLOAD PRESCRIPTION */}
-        {activeStep === 'upload' && (
-          <div>
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 'var(--radius-xl)',
-              padding: '2rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <span style={{
-                    background: '#eef2ff',
-                    color: '#4f46e5',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    padding: '3px 10px',
-                    borderRadius: '9999px'
+                  {/* Step 1 Completion & Sequential Progression to Step 2 */}
+                  <div style={{
+                    marginTop: '2rem',
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)',
+                    border: '1.5px solid #c7d2fe',
+                    borderRadius: 'var(--radius-xl)',
+                    padding: '1.5rem 2rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1.25rem',
+                    boxShadow: '0 4px 15px rgba(79, 70, 229, 0.05)'
                   }}>
-                    Step 1 of 5
-                  </span>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    Upload Discharge Summary or Doctor's Prescription
-                  </h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-                    Upload a smartphone photo or PDF scan. Our clinical OCR extracts doctors' cursive and abbreviations.
-                  </p>
-                </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1.3rem' }}>✅</span>
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)', margin: 0 }}>
+                          Step 1 Complete: {prescriptions.length} Prescription{prescriptions.length > 1 ? 's' : ''} on File
+                        </h4>
+                      </div>
+                      <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 0 0' }}>
+                        Your verified medications are saved. Now proceed to configure your dose timetable and audio alarms.
+                      </p>
+                    </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveStep('prescriptions')}
-                    style={{
-                      background: '#f8fafc',
-                      color: '#475569',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: 'var(--radius-md)',
-                      padding: '8px 16px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    View Latest Prescriptions ({prescriptions.length})
-                  </button>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddAnotherRx(true)}
+                        style={{
+                          background: '#ffffff',
+                          color: '#475569',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: 'var(--radius-md)',
+                          padding: '10px 18px',
+                          fontSize: '0.825rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ➕ Add Another Rx
+                      </button>
 
-                  <button
-                    type="button"
-                    className="btn-hero-launch"
-                    onClick={() => setActiveStep('verify')}
-                    style={{ padding: '8px 16px', fontSize: '0.825rem' }}
-                  >
-                    <span>Go to Step 2: Verify Medicines</span>
-                    <span>→</span>
-                  </button>
-                </div>
-              </div>
+                      <button
+                        type="button"
+                        className="btn-hero-launch"
+                        onClick={() => {
+                          playMedicalChime();
+                          setActiveStep('reminders');
+                        }}
+                        style={{ padding: '10px 22px', fontSize: '0.85rem' }}
+                      >
+                        <span>Proceed to Step 2: Dose Timetable</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
 
-              {/* Document Analysis / Upload Component */}
-              <DocumentAnalysisView />
             </div>
           </div>
         )}
 
-        {/* 4. STEP 2: VERIFY MEDICINES */}
-        {activeStep === 'verify' && (
-          <div>
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 'var(--radius-xl)',
-              padding: '2rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <span style={{
-                    background: '#eef2ff',
-                    color: '#4f46e5',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    padding: '3px 10px',
-                    borderRadius: '9999px'
-                  }}>
-                    Step 2 of 5
-                  </span>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    Verify Extracted Medicines &amp; Abbreviation Check
-                  </h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-                    Compare the AI transcription with physical prescription labels. Expand Latin medical codes (*Rx, tid, od, sos*).
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="btn-hero-launch"
-                  onClick={() => {
-                    playMedicalChime();
-                    setToastMessage('✅ Medicines verified! Moving to Set Reminders & Alarms.');
-                    setActiveStep('reminders');
-                  }}
-                  style={{ padding: '8px 18px', fontSize: '0.825rem' }}
-                >
-                  <span>Verify &amp; Proceed to Set Reminders</span>
-                  <span>→</span>
-                </button>
-              </div>
-
-              {/* Handwritten OCR View */}
-              <HandwrittenOCRView />
-            </div>
-          </div>
-        )}
-
-        {/* 5. STEP 3: SET REMINDERS */}
+        {/* STEP 2: SET REMINDERS & ALARMS */}
         {activeStep === 'reminders' && (
           <div>
             <div style={{
@@ -1685,10 +1620,10 @@ export default function DashboardPortal({
                     padding: '3px 10px',
                     borderRadius: '9999px'
                   }}>
-                    Step 3 of 5
+                    Step 2 of 6
                   </span>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    Set Medication Reminders &amp; Audio Alarm Chimes
+                    2. Daily Dose Timetable &amp; Audio Alarm Chimes
                   </h2>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
                     Arm synthesized Web Audio alarm chimes for morning, afternoon, and evening doses. Check off completed doses.
@@ -1698,21 +1633,65 @@ export default function DashboardPortal({
                 <button
                   type="button"
                   className="btn-hero-launch"
-                  onClick={() => setActiveStep('followup')}
+                  onClick={() => {
+                    playMedicalChime();
+                    setActiveStep('followup');
+                  }}
                   style={{ padding: '8px 18px', fontSize: '0.825rem' }}
                 >
-                  <span>Go to Step 4: Schedule Follow-up</span>
+                  <span>Proceed to Step 3: Follow-Up Checkups</span>
                   <span>→</span>
                 </button>
               </div>
 
               {/* Timeline Reminders View */}
               <TimelineView setToastMessage={setToastMessage} />
+
+              {/* Step 2 Bottom Progression Bar */}
+              <div style={{
+                marginTop: '2rem',
+                borderTop: '1px solid #f1f5f9',
+                paddingTop: '1.25rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveStep('prescriptions')}
+                  style={{
+                    background: '#f8fafc',
+                    color: '#64748b',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '8px 16px',
+                    fontSize: '0.825rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back to Step 1: Prescriptions
+                </button>
+                <button
+                  type="button"
+                  className="btn-hero-launch"
+                  onClick={() => {
+                    playMedicalChime();
+                    setActiveStep('followup');
+                  }}
+                  style={{ padding: '10px 22px', fontSize: '0.85rem' }}
+                >
+                  <span>Proceed to Step 3: Follow-Up Checkups</span>
+                  <span>→</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* 6. STEP 4: SCHEDULE FOLLOW-UP */}
+        {/* STEP 3: SCHEDULE FOLLOW-UP VISITS */}
         {activeStep === 'followup' && (
           <div>
             <div style={{
@@ -1732,10 +1711,10 @@ export default function DashboardPortal({
                     padding: '3px 10px',
                     borderRadius: '9999px'
                   }}>
-                    Step 4 of 5
+                    Step 3 of 6
                   </span>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    Upcoming Medical Follow-Ups &amp; Clinic Checkups
+                    3. Upcoming Medical Follow-Ups &amp; Clinic Checkups
                   </h2>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
                     Never miss a crucial postoperative appointment. Sync reminders with your phone's calendar (.ics).
@@ -1763,10 +1742,13 @@ export default function DashboardPortal({
                   <button
                     type="button"
                     className="btn-hero-launch"
-                    onClick={() => setActiveStep('recovery')}
+                    onClick={() => {
+                      playMedicalChime();
+                      setActiveStep('recovery');
+                    }}
                     style={{ padding: '8px 18px', fontSize: '0.825rem' }}
                   >
-                    <span>Go to Step 5: Track Recovery</span>
+                    <span>Proceed to Step 4: Track Recovery</span>
                     <span>→</span>
                   </button>
                 </div>
@@ -1880,118 +1862,193 @@ export default function DashboardPortal({
 
               {/* Appointments List */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {appointments.map((apt) => (
-                  <div
-                    key={apt.id}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 'var(--radius-lg)',
-                      padding: '1.25rem',
-                      background: '#f8fafc',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.75rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)' }}>
-                            {apt.doctor}
-                          </span>
-                          <span style={{
-                            background: '#e0e7ff',
-                            color: '#4338ca',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '4px'
-                          }}>
-                            {apt.specialty}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '2px' }}>
-                          📍 {apt.clinic}
-                        </div>
-                      </div>
-
-                      <span style={{
-                        background: apt.daysRemaining <= 5 ? '#fef2f2' : '#eef2ff',
-                        color: apt.daysRemaining <= 5 ? '#dc2626' : '#4f46e5',
-                        border: `1px solid ${apt.daysRemaining <= 5 ? '#fecaca' : '#c7d2fe'}`,
-                        padding: '4px 12px',
+                {appointments.length === 0 ? (
+                  <div style={{
+                    border: '1.5px dashed #cbd5e1',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '2.5rem 1.5rem',
+                    textAlign: 'center',
+                    background: '#f8fafc'
+                  }}>
+                    <span style={{ fontSize: '2.2rem' }}>📅</span>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)', margin: '8px 0 4px 0' }}>
+                      No Follow-Up Appointments Scheduled
+                    </h4>
+                    <p style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '420px', margin: '0 auto 1.25rem auto' }}>
+                      Add your scheduled postoperative visits or clinical checkups to set automated alarm reminders and export calendar events.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddApt(true)}
+                      style={{
+                        background: '#4f46e5',
+                        color: '#ffffff',
+                        border: 'none',
                         borderRadius: '9999px',
-                        fontSize: '0.8rem',
-                        fontWeight: 800
-                      }}>
-                        🗓️ {apt.date} • {apt.time} (In {apt.daysRemaining} days)
-                      </span>
-                    </div>
-
-                    {apt.prepNotes && (
-                      <div style={{
-                        background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '8px 12px',
+                        padding: '9px 20px',
                         fontSize: '0.825rem',
-                        color: '#475569'
-                      }}>
-                        <strong>Preparation:</strong> {apt.prepNotes}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleAlarm(apt.id)}
-                        style={{
-                          background: apt.alarmSet ? '#eef2ff' : '#ffffff',
-                          border: `1px solid ${apt.alarmSet ? '#6366f1' : '#cbd5e1'}`,
-                          color: apt.alarmSet ? '#4f46e5' : '#475569',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '6px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <span>{apt.alarmSet ? '🔔' : '🔕'}</span>
-                        <span>{apt.alarmSet ? 'Alarm Armed' : 'Set Alarm'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleExportIcs(apt)}
-                        style={{
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          color: '#334155',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '6px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <span>📅</span>
-                        <span>Export to Calendar (.ics)</span>
-                      </button>
-                    </div>
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ➕ Add Follow-Up Checkup
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  appointments.map((apt) => (
+                    <div
+                      key={apt.id}
+                      style={{
+                        border: '1px solid #e2e8f0',
+                        borderRadius: 'var(--radius-lg)',
+                        padding: '1.25rem',
+                        background: '#f8fafc',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)' }}>
+                              {apt.doctor}
+                            </span>
+                            <span style={{
+                              background: '#e0e7ff',
+                              color: '#4338ca',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '4px'
+                            }}>
+                              {apt.specialty}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '2px' }}>
+                            📍 {apt.clinic}
+                          </div>
+                        </div>
+
+                        <span style={{
+                          background: apt.daysRemaining <= 5 ? '#fef2f2' : '#eef2ff',
+                          color: apt.daysRemaining <= 5 ? '#dc2626' : '#4f46e5',
+                          border: `1px solid ${apt.daysRemaining <= 5 ? '#fecaca' : '#c7d2fe'}`,
+                          padding: '4px 12px',
+                          borderRadius: '9999px',
+                          fontSize: '0.8rem',
+                          fontWeight: 800
+                        }}>
+                          🗓️ {apt.date} • {apt.time} (In {apt.daysRemaining} days)
+                        </span>
+                      </div>
+
+                      {apt.prepNotes && (
+                        <div style={{
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '8px 12px',
+                          fontSize: '0.825rem',
+                          color: '#475569'
+                        }}>
+                          <strong>Preparation:</strong> {apt.prepNotes}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAlarm(apt.id)}
+                          style={{
+                            background: apt.alarmSet ? '#eef2ff' : '#ffffff',
+                            border: `1px solid ${apt.alarmSet ? '#6366f1' : '#cbd5e1'}`,
+                            color: apt.alarmSet ? '#4f46e5' : '#475569',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '6px 12px',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <span>{apt.alarmSet ? '🔔' : '🔕'}</span>
+                          <span>{apt.alarmSet ? 'Alarm Armed' : 'Set Alarm'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleExportIcs(apt)}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            color: '#334155',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '6px 12px',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <span>📅</span>
+                          <span>Export to Calendar (.ics)</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Step 3 Bottom Progression Bar */}
+              <div style={{
+                marginTop: '2rem',
+                borderTop: '1px solid #f1f5f9',
+                paddingTop: '1.25rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveStep('reminders')}
+                  style={{
+                    background: '#f8fafc',
+                    color: '#64748b',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '8px 16px',
+                    fontSize: '0.825rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back to Step 2: Dose Timetable
+                </button>
+                <button
+                  type="button"
+                  className="btn-hero-launch"
+                  onClick={() => {
+                    playMedicalChime();
+                    setActiveStep('recovery');
+                  }}
+                  style={{ padding: '10px 22px', fontSize: '0.85rem' }}
+                >
+                  <span>Proceed to Step 4: Track Recovery</span>
+                  <span>→</span>
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* 7. STEP 5: TRACK RECOVERY */}
+        {/* STEP 4: TRACK RECOVERY */}
         {activeStep === 'recovery' && (
           <div>
             <div style={{
@@ -2011,10 +2068,10 @@ export default function DashboardPortal({
                     padding: '3px 10px',
                     borderRadius: '9999px'
                   }}>
-                    Step 5 of 5
+                    Step 4 of 6
                   </span>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    Daily Recovery Progress &amp; Symptom Tracker
+                    4. Daily Recovery Progress &amp; Symptom Tracker
                   </h2>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
                     Log pain, temperature, blood pressure, and incision healing to spot complications early.
@@ -2030,7 +2087,7 @@ export default function DashboardPortal({
                   fontWeight: 800,
                   fontSize: '0.825rem'
                 }}>
-                  🌱 Day 3 of 14 Recovery Milestone (21%)
+                  🌱 Recovery Vitals Monitoring Active
                 </div>
               </div>
 
@@ -2190,54 +2247,261 @@ export default function DashboardPortal({
                 </h4>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {recoveryLogs.map((log, i) => (
-                    <div 
-                      key={i}
-                      style={{
-                        padding: '10px 14px',
-                        borderRadius: 'var(--radius-md)',
-                        border: `1px solid ${log.status.includes('Alert') ? '#fecaca' : '#e2e8f0'}`,
-                        background: log.status.includes('Alert') ? '#fef2f2' : '#ffffff',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: '0.85rem'
-                      }}
-                    >
-                      <div>
-                        <strong>{log.date}</strong> — Pain: <strong>{log.painLevel}/10</strong> • Temp: <strong>{log.temperature}</strong> • BP: <strong>{log.bloodPressure}</strong>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          Incision: {log.woundStatus} {log.notes && `• "${log.notes}"`}
-                        </div>
-                      </div>
-
-                      <span style={{
-                        color: log.status.includes('Alert') ? '#dc2626' : '#15803d',
-                        fontWeight: 700,
-                        fontSize: '0.75rem'
-                      }}>
-                        {log.status}
-                      </span>
+                  {recoveryLogs.length === 0 ? (
+                    <div style={{
+                      padding: '1.5rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px dashed #cbd5e1',
+                      background: '#f8fafc',
+                      textAlign: 'center',
+                      color: '#64748b',
+                      fontSize: '0.85rem'
+                    }}>
+                      ⚪ No recovery vitals recorded yet. Fill out the form above to log your pain level, temperature, and blood pressure.
                     </div>
-                  ))}
+                  ) : (
+                    recoveryLogs.map((log, i) => (
+                      <div 
+                        key={i}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: 'var(--radius-md)',
+                          border: `1px solid ${log.status.includes('Alert') ? '#fecaca' : '#e2e8f0'}`,
+                          background: log.status.includes('Alert') ? '#fef2f2' : '#ffffff',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <div>
+                          <strong>{log.date}</strong> — Pain: <strong>{log.painLevel}/10</strong> • Temp: <strong>{log.temperature}</strong> • BP: <strong>{log.bloodPressure}</strong>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            Incision: {log.woundStatus} {log.notes && `• "${log.notes}"`}
+                          </div>
+                        </div>
+
+                        <span style={{
+                          color: log.status.includes('Alert') ? '#dc2626' : '#15803d',
+                          fontWeight: 700,
+                          fontSize: '0.75rem'
+                        }}>
+                          {log.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
+              </div>
+
+              {/* Step 4 Bottom Progression Bar */}
+              <div style={{
+                marginTop: '2rem',
+                borderTop: '1px solid #f1f5f9',
+                paddingTop: '1.25rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveStep('followup')}
+                  style={{
+                    background: '#f8fafc',
+                    color: '#64748b',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '8px 16px',
+                    fontSize: '0.825rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back to Step 3: Follow-Up
+                </button>
+                <button
+                  type="button"
+                  className="btn-hero-launch"
+                  onClick={() => {
+                    playMedicalChime();
+                    setActiveStep('diet');
+                  }}
+                  style={{ padding: '10px 22px', fontSize: '0.85rem' }}
+                >
+                  <span>Proceed to Step 5: Diet &amp; Nutrition</span>
+                  <span>→</span>
+                </button>
               </div>
 
             </div>
           </div>
         )}
 
-        {/* 8. DIET & NUTRITION TAB */}
+        {/* STEP 5: DIET & NUTRITION TAB */}
         {activeStep === 'diet' && (
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-xl)', padding: '2rem' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-xl)', padding: '2rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <span style={{
+                  background: '#eef2ff',
+                  color: '#4f46e5',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  padding: '3px 10px',
+                  borderRadius: '9999px'
+                }}>
+                  Step 5 of 6
+                </span>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
+                  5. Post-Discharge Diet &amp; Clinical Nutrition
+                </h2>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                  Tailored meal recommendations, foods that promote tissue healing, and items to strictly avoid with your medications.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="btn-hero-launch"
+                onClick={() => {
+                  playMedicalChime();
+                  setActiveStep('confusion');
+                }}
+                style={{ padding: '8px 18px', fontSize: '0.825rem' }}
+              >
+                <span>Proceed to Step 6: Confusion Guard</span>
+                <span>→</span>
+              </button>
+            </div>
+
             <DietPlannerView />
+
+            {/* Step 5 Bottom Progression Bar */}
+            <div style={{
+              marginTop: '2rem',
+              borderTop: '1px solid #f1f5f9',
+              paddingTop: '1.25rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <button
+                type="button"
+                onClick={() => setActiveStep('recovery')}
+                style={{
+                  background: '#f8fafc',
+                  color: '#64748b',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '8px 16px',
+                  fontSize: '0.825rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                ← Back to Step 4: Track Recovery
+              </button>
+              <button
+                type="button"
+                className="btn-hero-launch"
+                onClick={() => {
+                  playMedicalChime();
+                  setActiveStep('confusion');
+                }}
+                style={{ padding: '10px 22px', fontSize: '0.85rem' }}
+              >
+                <span>Proceed to Step 6: Confusion Guard</span>
+                <span>→</span>
+              </button>
+            </div>
           </div>
         )}
 
-        {/* 9. CONFUSION SAFETY GUARD TAB */}
+        {/* STEP 6: CONFUSION SAFETY GUARD TAB */}
         {activeStep === 'confusion' && (
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-xl)', padding: '2rem' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-xl)', padding: '2rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <span style={{
+                  background: '#eef2ff',
+                  color: '#4f46e5',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  padding: '3px 10px',
+                  borderRadius: '9999px'
+                }}>
+                  Step 6 of 6
+                </span>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
+                  6. Medication Confusion Guard &amp; LASA Drug Safety
+                </h2>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                  Verify high-risk look-alike sound-alike (LASA) pharmaceutical drug confusions to prevent adverse events.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="btn-hero-launch"
+                onClick={() => {
+                  playMedicalChime();
+                  setToastMessage('🎉 Recovery protocol walkthrough completed!');
+                  setActiveStep('overview');
+                }}
+                style={{ padding: '8px 18px', fontSize: '0.825rem' }}
+              >
+                <span>✓ Return to Recovery Overview</span>
+                <span>→</span>
+              </button>
+            </div>
+
             <ConfusionGuardView />
+
+            {/* Step 6 Bottom Progression Bar */}
+            <div style={{
+              marginTop: '2rem',
+              borderTop: '1px solid #f1f5f9',
+              paddingTop: '1.25rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <button
+                type="button"
+                onClick={() => setActiveStep('diet')}
+                style={{
+                  background: '#f8fafc',
+                  color: '#64748b',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '8px 16px',
+                  fontSize: '0.825rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                ← Back to Step 5: Diet &amp; Nutrition
+              </button>
+              <button
+                type="button"
+                className="btn-hero-launch"
+                onClick={() => {
+                  playMedicalChime();
+                  setToastMessage('🎉 All 6 recovery protocol steps completed!');
+                  setActiveStep('overview');
+                }}
+                style={{ padding: '10px 22px', fontSize: '0.85rem' }}
+              >
+                <span>✓ All Steps Completed • Return to Overview</span>
+                <span>→</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -2291,11 +2555,18 @@ export default function DashboardPortal({
               textAlign: 'center',
               maxHeight: '480px'
             }}>
-              <img 
-                src={previewModalRx.imagePreview || '/sample_prescription.jpg'} 
-                alt="Doctor prescription note scan" 
-                style={{ width: '100%', height: 'auto', maxHeight: '480px', objectFit: 'contain', display: 'block' }}
-              />
+              {previewModalRx.imagePreview ? (
+                <img 
+                  src={previewModalRx.imagePreview} 
+                  alt="Doctor prescription note scan" 
+                  style={{ width: '100%', height: 'auto', maxHeight: '480px', objectFit: 'contain', display: 'block' }}
+                />
+              ) : (
+                <div style={{ padding: '3rem 1.5rem', color: '#64748b' }}>
+                  <span>📄</span>
+                  <p style={{ margin: '8px 0 0 0', fontWeight: 700 }}>No original image preview stored for this digital prescription.</p>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '1rem' }}>
