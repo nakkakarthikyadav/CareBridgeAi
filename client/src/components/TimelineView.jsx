@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { playMedicalChime, triggerBrowserNotification } from '../utils/audioChime';
 import { resetFiredDose, isDoseDueAtTime } from '../utils/medicationAlarmEngine';
 
@@ -159,17 +159,29 @@ export default function TimelineView({ setToastMessage }) {
     return () => clearInterval(clockTimer);
   }, []);
 
-  // Listen for sync events dispatched when an alert marks a dose done
+  const isInternalUpdate = useRef(false);
+
+  // Listen for sync events dispatched when an alert marks a dose done or external updates occur
   useEffect(() => {
     const handleMedsSync = () => {
+      if (isInternalUpdate.current) {
+        isInternalUpdate.current = false;
+        return;
+      }
       try {
         const saved = localStorage.getItem('carebridge_meds_checklist');
         if (saved) {
-          setMeds(JSON.parse(saved));
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setMeds(parsed);
+          }
         }
         const savedLogs = localStorage.getItem('carebridge_activity_logs');
         if (savedLogs) {
-          setActivityLogs(JSON.parse(savedLogs));
+          const parsedLogs = JSON.parse(savedLogs);
+          if (Array.isArray(parsedLogs)) {
+            setActivityLogs(parsedLogs);
+          }
         }
       } catch {}
     };
@@ -276,71 +288,76 @@ export default function TimelineView({ setToastMessage }) {
     e.stopPropagation();
     playMedicalChime();
     resetFiredDose(itemId);
-    setMeds(prev => {
-      const updated = prev.map(item => {
-        if (item.id === itemId) {
-          const currentTimeStr = item.time || '';
-          let newTime = currentTimeStr;
-          if (/am/i.test(currentTimeStr)) {
-            newTime = currentTimeStr.replace(/am/gi, 'PM');
-          } else if (/pm/i.test(currentTimeStr)) {
-            newTime = currentTimeStr.replace(/pm/gi, 'AM');
-          } else {
-            newTime = `${currentTimeStr} PM`;
-          }
-          if (setToastMessage) {
-            setToastMessage(`Updated ${getItemLabel(item)} time to ${newTime}`);
-          }
-          const updatedItem = { ...item, time: newTime, done: false };
-          if (isDoseDueAtTime(newTime, new Date())) {
-            window.dispatchEvent(new CustomEvent('carebridge_test_alarm', { detail: updatedItem }));
-          }
-          return updatedItem;
+    isInternalUpdate.current = true;
+
+    let targetUpdated = null;
+    const updated = meds.map(item => {
+      if (item.id === itemId) {
+        const currentTimeStr = item.time || '';
+        let newTime = currentTimeStr;
+        if (/am/i.test(currentTimeStr)) {
+          newTime = currentTimeStr.replace(/\s*am/gi, ' PM');
+        } else if (/pm/i.test(currentTimeStr)) {
+          newTime = currentTimeStr.replace(/\s*pm/gi, ' AM');
+        } else {
+          newTime = `${currentTimeStr} PM`;
         }
-        return item;
-      });
-      try {
-        localStorage.setItem('carebridge_meds_checklist', JSON.stringify(updated));
-        window.dispatchEvent(new Event('carebridge_meds_updated'));
-      } catch {}
-      return updated;
+        if (setToastMessage) {
+          setToastMessage(`Updated ${getItemLabel(item)} time to ${newTime}`);
+        }
+        targetUpdated = { ...item, time: newTime, done: false };
+        return targetUpdated;
+      }
+      return item;
     });
+
+    try {
+      localStorage.setItem('carebridge_meds_checklist', JSON.stringify(updated));
+    } catch {}
+    setMeds(updated);
+    window.dispatchEvent(new Event('carebridge_meds_updated'));
+
+    if (targetUpdated && isDoseDueAtTime(targetUpdated.time, new Date())) {
+      window.dispatchEvent(new CustomEvent('carebridge_test_alarm', { detail: targetUpdated }));
+    }
   };
 
   const handleSetItemTimeToNow = (e, itemId) => {
     e.stopPropagation();
     playMedicalChime();
     resetFiredDose(itemId);
-    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setMeds(prev => {
-      let targetItem = null;
-      const updated = prev.map(item => {
-        if (item.id === itemId) {
-          if (setToastMessage) {
-            setToastMessage(`🔔 Set ${getItemLabel(item)} to current time (${nowTime})! Alert triggered.`);
-          }
-          targetItem = { ...item, time: nowTime, done: false };
-          return targetItem;
+    isInternalUpdate.current = true;
+
+    const nowTime = getFormattedCurrentMinute(0);
+    let targetItem = null;
+    const updated = meds.map(item => {
+      if (item.id === itemId) {
+        if (setToastMessage) {
+          setToastMessage(`🔔 Set ${getItemLabel(item)} to current time (${nowTime})! Alert triggered.`);
         }
-        return item;
-      });
-      try {
-        localStorage.setItem('carebridge_meds_checklist', JSON.stringify(updated));
-        window.dispatchEvent(new Event('carebridge_meds_updated'));
-      } catch {}
-      if (targetItem) {
-        window.dispatchEvent(new CustomEvent('carebridge_test_alarm', { detail: targetItem }));
+        targetItem = { ...item, time: nowTime, done: false };
+        return targetItem;
       }
-      return updated;
+      return item;
     });
+
+    try {
+      localStorage.setItem('carebridge_meds_checklist', JSON.stringify(updated));
+    } catch {}
+    setMeds(updated);
+    window.dispatchEvent(new Event('carebridge_meds_updated'));
+
+    if (targetItem) {
+      window.dispatchEvent(new CustomEvent('carebridge_test_alarm', { detail: targetItem }));
+    }
   };
 
   const handleAddItem = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const label = (newItemText || '').trim() || 'Prescribed Medication';
     const finalTime = (newItemTime || '').trim() || getFormattedCurrentMinute(0);
     const newItem = {
-      id: `task_${Date.now()}`,
+      id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       text: label,
       title: label,
       category: newItemCategory === 'meds' ? 'Confirmed Medications' : newItemCategory === 'advice' ? 'Discharge Advice' : 'Diet & Lifestyle',
@@ -351,31 +368,26 @@ export default function TimelineView({ setToastMessage }) {
 
     resetFiredDose(newItem.id);
     playMedicalChime();
+    isInternalUpdate.current = true;
 
     if (newItemCategory === 'meds') {
-      setMeds(prev => {
-        const updated = [...prev, newItem];
-        try {
-          localStorage.setItem('carebridge_meds_checklist', JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
+      const updated = [...meds, newItem];
+      try {
+        localStorage.setItem('carebridge_meds_checklist', JSON.stringify(updated));
+      } catch {}
+      setMeds(updated);
     } else if (newItemCategory === 'advice') {
-      setAdvice(prev => {
-        const updated = [...prev, newItem];
-        try {
-          localStorage.setItem('carebridge_advice_checklist', JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
+      const updated = [...advice, newItem];
+      try {
+        localStorage.setItem('carebridge_advice_checklist', JSON.stringify(updated));
+      } catch {}
+      setAdvice(updated);
     } else {
-      setDiet(prev => {
-        const updated = [...prev, newItem];
-        try {
-          localStorage.setItem('carebridge_diet_checklist', JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
+      const updated = [...diet, newItem];
+      try {
+        localStorage.setItem('carebridge_diet_checklist', JSON.stringify(updated));
+      } catch {}
+      setDiet(updated);
     }
 
     if (setToastMessage) {
