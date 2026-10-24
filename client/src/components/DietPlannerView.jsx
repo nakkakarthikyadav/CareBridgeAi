@@ -125,82 +125,89 @@ export default function DietPlannerView() {
           <p>Accelerate tissue healing, manage drug-food interactions, and reduce systemic inflammation.</p>
         </div>
 
-        {/* API Key settings trigger */}
-        <button
-          type="button"
-          onClick={() => setShowKeyConfig(!showKeyConfig)}
-          style={{
-            background: userApiKey ? '#eef2ff' : '#f8fafc',
-            border: `1px solid ${userApiKey ? '#c7d2fe' : '#e2e8f0'}`,
-            color: userApiKey ? '#4338ca' : '#64748b',
-            padding: '6px 14px',
-            borderRadius: '9999px',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <span>🔑</span>
-          <span>{userApiKey ? 'Gemini Key Configured' : 'Configure Gemini API Key'}</span>
-        </button>
       </div>
 
       <div className="module-body-card">
-        {/* Optional Gemini API Key Drawer */}
-        {showKeyConfig && (
-          <div style={{
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: 'var(--radius-md)',
-            padding: '1rem 1.25rem',
-            marginBottom: '1.5rem',
-            animation: 'fadeIn 0.2s ease'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <strong style={{ fontSize: '0.88rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>✨</span> Google Gemini AI Studio API Key
-              </strong>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                Auto-detected from server <code>.env</code> or override here
+        {/* Gemini API Key Configuration Banner */}
+        <div style={{
+          background: userApiKey ? 'linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)',
+          border: `1.5px solid ${userApiKey ? '#86efac' : '#c7d2fe'}`,
+          borderRadius: 'var(--radius-md)',
+          padding: '0.9rem 1.15rem',
+          marginBottom: '1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <strong style={{ fontSize: '0.88rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>✨</span> Google Gemini AI Integration
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '9999px',
+                background: userApiKey ? '#dcfce7' : '#e0e7ff',
+                color: userApiKey ? '#15803d' : '#4338ca',
+                border: `1px solid ${userApiKey ? '#86efac' : '#c7d2fe'}`
+              }}>
+                {userApiKey ? '✓ Live Gemini Key Configured' : 'Offline Clinical Protocol Active'}
               </span>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="password"
-                placeholder="Paste your Gemini API key (AIzaSy...)"
-                className="form-input"
-                value={userApiKey}
-                onChange={(e) => handleSaveApiKey(e.target.value)}
-                style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.85rem' }}
-              />
-              {userApiKey && (
-                <button
-                  type="button"
-                  onClick={() => handleSaveApiKey('')}
-                  style={{
-                    background: '#fee2e2',
-                    border: '1px solid #fecaca',
-                    color: '#b91c1c',
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px', marginBottom: 0 }}>
-              💡 If left blank, CareBridge AI automatically uses the <code>GEMINI_API_KEY</code> set in your backend <code>.env</code> file.
-            </p>
+            </strong>
+            <button
+              type="button"
+              onClick={() => setShowKeyConfig(!showKeyConfig)}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                color: '#4338ca',
+                padding: '4px 10px',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              {showKeyConfig ? '✕ Close Key Input' : (userApiKey ? '✏️ Edit / Change Key' : '🔑 Enter Gemini API Key')}
+            </button>
           </div>
-        )}
+
+          {showKeyConfig && (
+            <div style={{ animation: 'fadeIn 0.2s ease', marginTop: '4px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="password"
+                  placeholder="Paste your Google Gemini API key (AIzaSy...)"
+                  className="form-input"
+                  value={userApiKey}
+                  onChange={(e) => handleSaveApiKey(e.target.value)}
+                  style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.85rem' }}
+                />
+                {userApiKey && (
+                  <button
+                    type="button"
+                    onClick={() => handleSaveApiKey('')}
+                    style={{
+                      background: '#fee2e2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px', marginBottom: 0 }}>
+                💡 CareBridge AI queries Google Gemini in real-time with this key. If left blank, it uses <code>GEMINI_API_KEY</code> from <code>.env</code> or the built-in clinical nutritionist protocol.
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Prescription-Linked Clinical Profile */}
         {detectedRx ? (
@@ -414,21 +421,37 @@ export default function DietPlannerView() {
                   {result.identifiedDisease || condition || 'Clinical Recovery Protocol'}
                 </h3>
               </div>
-              <span style={{
-                padding: '5px 14px',
-                borderRadius: '9999px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                background: aiSource?.includes('Gemini') ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#ecfdf5',
-                color: aiSource?.includes('Gemini') ? '#ffffff' : '#065f46',
-                border: aiSource?.includes('Gemini') ? 'none' : '1px solid #a7f3d0',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: aiSource?.includes('Gemini') ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none'
-              }}>
-                {aiSource?.includes('Gemini') ? '✨ Google Gemini AI Active' : '🛡️ Clinical Nutrition Protocol'}
-              </span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  background: preference === 'Vegetarian' ? '#ecfdf5' : preference === 'Non-Vegetarian' ? '#fef2f2' : '#fefce8',
+                  color: preference === 'Vegetarian' ? '#047857' : preference === 'Non-Vegetarian' ? '#b91c1c' : '#b45309',
+                  border: `1px solid ${preference === 'Vegetarian' ? '#a7f3d0' : preference === 'Non-Vegetarian' ? '#fecaca' : '#fef08a'}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}>
+                  {preference === 'Vegetarian' ? '🥦 Vegetarian Diet' : preference === 'Non-Vegetarian' ? '🍗 Non-Vegetarian Diet' : '🥚 Eggetarian Diet'}
+                </span>
+                <span style={{
+                  padding: '5px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  background: aiSource?.includes('Gemini') ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#ecfdf5',
+                  color: aiSource?.includes('Gemini') ? '#ffffff' : '#065f46',
+                  border: aiSource?.includes('Gemini') ? 'none' : '1px solid #a7f3d0',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: aiSource?.includes('Gemini') ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none'
+                }}>
+                  {aiSource?.includes('Gemini') ? `✨ ${aiSource}` : '🛡️ CareBridge Clinical Nutritionist Protocol'}
+                </span>
+              </div>
             </div>
 
             {/* Rationale */}

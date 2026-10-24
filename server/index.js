@@ -5,6 +5,8 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import https from 'https';
+import dns from 'dns';
 import {
   handleRegister,
   handleLogin,
@@ -39,8 +41,65 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024 }
 });
 
+// Ensure Google & Cloudflare DNS for internet requests on networks with faulty DNS relays
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (_) {}
+
+const googleDnsAgent = new https.Agent({
+  keepAlive: true,
+  lookup: (hostname, opts, cb) => {
+    const callback = typeof opts === 'function' ? opts : cb;
+    const isAll = typeof opts === 'object' && opts && opts.all;
+    dns.resolve4(hostname, (err, addrs) => {
+      if (err || !addrs || !addrs.length) {
+        return dns.lookup(hostname, opts, cb);
+      }
+      if (isAll) {
+        callback(null, addrs.map(a => ({ address: a, family: 4 })));
+      } else {
+        callback(null, addrs[0], 4);
+      }
+    });
+  }
+});
+
+function postHttpsJson(urlStr, data) {
+  return new Promise((resolve, reject) => {
+    try {
+      const u = new URL(urlStr);
+      const postData = JSON.stringify(data);
+      const req = https.request({
+        hostname: u.hostname,
+        port: 443,
+        path: u.pathname + u.search,
+        method: 'POST',
+        agent: googleDnsAgent,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        },
+        timeout: 25000
+      }, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => resolve({ status: res.statusCode, ok: res.statusCode >= 200 && res.statusCode < 300, body }));
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Request timed out'));
+      });
+      req.on('error', reject);
+      req.write(postData);
+      req.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 // Helper: Call Gemini REST API directly with active Google AI Studio models
-async function callGemini(prompt, systemInstruction = '', inlineData = null, passedApiKey = null) {
+async function callGeminiRaw(prompt, systemInstruction = '', inlineData = null, passedApiKey = null) {
   // Dynamically re-read .env so any API key changes saved by the user are immediately picked up
   try {
     dotenv.config({ path: path.join(__dirname, '../.env'), override: true });
@@ -48,11 +107,10 @@ async function callGemini(prompt, systemInstruction = '', inlineData = null, pas
   } catch (_) {}
 
   const models = [
-    'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-1.5-flash',
-    'gemini-2.5-pro',
-    'gemini-1.5-pro'
+    'gemini-1.5-pro',
+    'gemini-2.0-flash-lite'
   ];
 
   const apiKey = (passedApiKey || process.env.GEMINI_API_KEY || '').trim();
@@ -89,23 +147,20 @@ async function callGemini(prompt, systemInstruction = '', inlineData = null, pas
           };
         }
 
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
+        const response = await postHttpsJson(url, requestBody);
 
         if (response.ok) {
-          const data = await response.json();
+          const data = JSON.parse(response.body);
           const candidate = data.candidates?.[0];
           const text = candidate?.content?.parts?.map(p => p.text).join('') || '';
           if (text) {
             console.log(`[Gemini API] Successfully generated clinical response using model: ${model}`);
-            return text;
+            return { text, liveAi: true, modelUsed: model };
           }
         } else {
-          const errData = await response.json().catch(() => ({}));
-          lastErrorMsg = errData?.error?.message || response.statusText;
+          let errData;
+          try { errData = JSON.parse(response.body); } catch (_) {}
+          lastErrorMsg = errData?.error?.message || `HTTP ${response.status}`;
           console.warn(`[Gemini API] Model ${model} returned HTTP ${response.status}:`, lastErrorMsg);
         }
       } catch (err) {
@@ -114,10 +169,18 @@ async function callGemini(prompt, systemInstruction = '', inlineData = null, pas
       }
     }
     console.warn(`[Gemini API] Live API requests failed across all models (${lastErrorMsg}). Falling back to clinical extraction engine.`);
+    return { text: null, liveAi: false, error: lastErrorMsg };
   } else {
     console.log(`[Gemini API] No GEMINI_API_KEY detected in .env or request. Using clinical fallback extraction engine.`);
+    return { text: null, liveAi: false, error: 'No API key provided' };
   }
+}
 
+async function callGemini(prompt, systemInstruction = '', inlineData = null, passedApiKey = null) {
+  const result = await callGeminiRaw(prompt, systemInstruction, inlineData, passedApiKey);
+  if (result.liveAi && result.text) {
+    return result.text;
+  }
   return getClinicalFallbackResponse(prompt);
 }
 
@@ -692,39 +755,271 @@ Return only JSON without markdown fences.`;
   }
 });
 
+// Comprehensive Clinical Diet Plan Generator (Offline Protocol Engine)
+function buildClinicalDietPlan({ condition = '', medications = [], dietaryPreference = 'Vegetarian', symptoms = '', prescriptionSummary = '' }) {
+  const isVeg = dietaryPreference === 'Vegetarian';
+  const isNonVeg = dietaryPreference === 'Non-Vegetarian';
+  const isEggetarian = dietaryPreference === 'Eggetarian';
+
+  const medNames = (medications || []).map(m => typeof m === 'string' ? m : (m.name || m.drugName || '')).join(' ');
+  const combinedContext = `${condition} ${medNames} ${symptoms} ${prescriptionSummary}`.toLowerCase();
+
+  // Detect clinical condition category from prescription and condition text
+  const isRespiratory = combinedContext.includes('bronch') || combinedContext.includes('cough') || combinedContext.includes('expectorant') || combinedContext.includes('respirat') || combinedContext.includes('cold') || combinedContext.includes('congestion') || combinedContext.includes('lung');
+  const isAntibiotic = !isRespiratory && (combinedContext.includes('amoxicillin') || combinedContext.includes('antibiotic') || combinedContext.includes('augmentin') || combinedContext.includes('cefixime') || combinedContext.includes('azithromycin') || combinedContext.includes('ciprofloxacin') || combinedContext.includes('infection'));
+  const isCardiac = combinedContext.includes('cardiac') || combinedContext.includes('stent') || combinedContext.includes('angioplasty') || combinedContext.includes('antiplatelet') || combinedContext.includes('hypertension') || combinedContext.includes('blood pressure') || combinedContext.includes('cardiovascular') || combinedContext.includes('metoprolol') || combinedContext.includes('amlodipine') || combinedContext.includes('atorvastatin');
+  const isOrthopedic = combinedContext.includes('orthopedic') || combinedContext.includes('knee') || combinedContext.includes('hip') || combinedContext.includes('bone') || combinedContext.includes('fracture') || combinedContext.includes('joint') || combinedContext.includes('arthroplasty');
+  const isDiabetes = combinedContext.includes('diabetes') || combinedContext.includes('diabetic') || combinedContext.includes('metformin') || combinedContext.includes('insulin') || combinedContext.includes('glimepiride') || combinedContext.includes('blood sugar');
+  const isGastric = combinedContext.includes('pantoprazole') || combinedContext.includes('omeprazole') || combinedContext.includes('gastritis') || combinedContext.includes('ulcer') || combinedContext.includes('acid') || combinedContext.includes('abdominal');
+
+  let identifiedDisease = condition || 'Clinical Post-Discharge Recovery';
+  let dietaryRationale = '';
+  let foodsToEmphasize = [];
+  let foodsToStrictlyAvoid = [];
+  let sampleMealPlan = {};
+  let hydrationGoal = '2.0 to 2.5 Liters of warm or room-temperature water daily.';
+
+  // Select protein source based on dietary preference
+  let proteinEmphasize;
+  if (isNonVeg) {
+    proteinEmphasize = { food: 'Lean Animal Proteins (Skinless Chicken Breast, Steamed Salmon, Bone Broth)', benefit: 'Provides bioavailable complete amino acids to accelerate tissue regeneration, collagen formation, and immune recovery.' };
+  } else if (isEggetarian) {
+    proteinEmphasize = { food: 'Farm-Fresh Whole Eggs & Egg Whites (Boiled, Poached, or Scrambled)', benefit: 'Delivers complete biological value protein, choline, and lutein to repair cellular structures without animal fats.' };
+  } else {
+    proteinEmphasize = { food: 'Plant-Based High-Protein Foods (Moong Dal, Yellow Lentils, Steamed Tofu, Paneer, Sprouted Legumes)', benefit: 'Supplies essential branched-chain amino acids for tissue repair and cellular recovery without saturated animal fats.' };
+  }
+
+  if (isRespiratory) {
+    identifiedDisease = condition && !condition.includes('Post-Discharge Recovery') ? condition : 'Acute Bronchitis & Respiratory Infection Protocol';
+    dietaryRationale = `Recovery from acute respiratory infection and bronchial inflammation requires warm, soothing, antioxidant-rich nutrition tailored to a ${dietaryPreference.toLowerCase()} lifestyle. Focuses on loosening mucosal secretions, soothing airway irritation, and strengthening immune defenses alongside prescribed expectorants and antibiotics.`;
+    foodsToEmphasize = [
+      proteinEmphasize,
+      { food: 'Warm Turmeric & Ginger Golden Broth', benefit: 'Natural curcumin and gingerol soothe inflamed bronchial pathways and loosen airway mucus.' },
+      { food: 'Vitamin C & Bioflavonoid Fruits (Amla, Papaya, Sweet Lime)', benefit: 'Boosts alveolar macrophage activity and accelerates respiratory mucosal repair.' },
+      { food: 'Warm Herbal Decoction with Raw Honey', benefit: 'Demulcent action coats the pharynx, reduces coughing spasms, and eases airway tightness.' },
+      { food: 'Hydrating Vegetable & Lentil Clear Soups', benefit: 'Maintains optimal respiratory tract mucosal moisture and thins bronchial secretions.' }
+    ];
+    foodsToStrictlyAvoid = [
+      { food: 'Iced Beverages & Cold Frozen Desserts', reason: 'Triggers bronchospasm, thickens bronchial phlegm, and aggravates persistent coughing.' },
+      { food: 'Heavy Deep-Fried & Highly Spiced Greasy Foods', reason: 'Increases gastric acid reflux that irritates the vocal cords and bronchial passages.' },
+      { food: 'Refined White Sugars & Commercial Candies', reason: 'Suppresses neutrophil phagocytic activity and prolongs respiratory recovery time.' },
+      { food: 'Alcohol & Highly Carbonated Sodas', reason: 'Dehydrates respiratory mucous membranes and interferes with cough/expectorant metabolism.' }
+    ];
+    sampleMealPlan = {
+      breakfast: isNonVeg
+        ? 'Two soft poached eggs on warm whole-grain toast with sliced avocado and warm ginger-tulsi tea.'
+        : isEggetarian
+        ? 'Fluffy egg-white scramble with turmeric, spinach, whole-wheat toast, and warm ginger tea.'
+        : 'Warm spiced oatmeal with almond milk, chia seeds, sliced bananas, and a cup of warm ginger-tulsi tea.',
+      midMorningSnack: 'Steaming clear vegetable-lentil broth with crushed black pepper and a touch of lemon.',
+      lunch: isNonVeg
+        ? 'Grilled herb chicken breast or steamed salmon with brown rice, sautéed baby spinach, and warm chicken bone broth.'
+        : isEggetarian
+        ? 'Steamed whole-wheat phulkas with yellow moong dal, boiled egg curry, and lightly sautéed greens.'
+        : 'Steamed whole-wheat phulkas or brown rice with yellow moong dal, stewed vegetables, and fresh mint-coriander chutney.',
+      eveningSnack: 'Warm golden turmeric milk (or almond milk) with crushed almonds and a teaspoon of honey.',
+      dinner: isNonVeg
+        ? 'Restorative chicken and vegetable soup with tender carrots, broccoli, and warm quinoa.'
+        : isEggetarian
+        ? 'Steamed egg-white frittata with zucchini and mushrooms, paired with warm vegetable soup.'
+        : 'Light khichdi (rice & yellow lentils) tempered with cumin, turmeric, and steamed bottle gourd.'
+    };
+    hydrationGoal = '2.5 to 3.0 Liters of warm water and herbal teas daily to keep respiratory mucus thin and easy to clear.';
+  } else if (isAntibiotic) {
+    identifiedDisease = condition && !condition.includes('Post-Discharge Recovery') ? condition : 'Bacterial Infection & Antibiotic Recovery Protocol';
+    dietaryRationale = `Active antibiotic therapy requires focused nutritional support to replenish gut microflora, prevent antibiotic-associated digestive upset, and promote complete bacterial clearance with a ${dietaryPreference.toLowerCase()} menu.`;
+    foodsToEmphasize = [
+      proteinEmphasize,
+      { food: 'Probiotic Live-Culture Curd / Yogurt (taken 2h away from antibiotic)', benefit: 'Repopulates beneficial gut microbiome depleted by broad-spectrum antibiotic therapy.' },
+      { food: 'Prebiotic Soluble Fiber (Bananas, Steamed Asparagus, Rolled Oats)', benefit: 'Feeds colonocytes and short-chain fatty acid-producing bacteria for mucosal barrier integrity.' },
+      { food: 'Zinc & Vitamin C Rich Whole Foods (Pumpkin Seeds, Bell Peppers)', benefit: 'Synergizes with antibiotic therapy to accelerate tissue healing and immune response.' },
+      { food: 'Anti-Inflammatory Steamed Leafy Greens', benefit: 'Provides vital electrolytes and antioxidants while remaining very gentle on the stomach.' }
+    ];
+    foodsToStrictlyAvoid = [
+      { food: 'Taking High-Calcium Dairy AT THE SAME MINUTE as Antibiotics', reason: 'Calcium binds with certain antibiotics in the gut, reducing therapeutic absorption (separate by 2 hours).' },
+      { food: 'Alcohol & High-Proof Beverages', reason: 'Triggers severe nausea, liver stress, and compromises antibiotic effectiveness.' },
+      { food: 'Excessive Chili & Gastric Irritants', reason: 'Aggravates stomach lining already sensitized by antibiotic treatment.' }
+    ];
+    sampleMealPlan = {
+      breakfast: isNonVeg
+        ? 'Whole-grain toast with boiled eggs, sliced papaya, and light herbal chamomile tea.'
+        : isEggetarian
+        ? 'Soft boiled eggs with whole-grain toast, sliced papaya, and chamomile tea.'
+        : 'Warm oatmeal with sliced banana, flaxseeds, and a cup of warm chamomile tea.',
+      midMorningSnack: 'Probiotic fresh curd (yogurt) with a drizzle of honey (scheduled 2 hours away from antibiotic).',
+      lunch: isNonVeg
+        ? 'Grilled lemon-coriander chicken breast with brown rice, steamed carrots, and yellow lentil soup.'
+        : isEggetarian
+        ? 'Steamed brown rice with yellow lentil dal, soft egg curry, and steamed green beans.'
+        : 'Soft whole-wheat rotis with yellow moong dal, paneer bhurji, and steamed green beans.',
+      eveningSnack: 'Tender coconut water with a handful of soaked almonds and walnuts.',
+      dinner: isNonVeg
+        ? 'Tender chicken and vegetable stew with quinoa and warm herbal broth.'
+        : isEggetarian
+        ? 'Egg-white scramble with spinach and tomatoes, whole-wheat toast, and light vegetable soup.'
+        : 'Light moong dal khichdi with stewed bottle gourd and warm cumin broth.'
+    };
+    hydrationGoal = '2.5 Liters of water daily to support kidney clearance of drug metabolites.';
+  } else if (isCardiac) {
+    identifiedDisease = condition && !condition.includes('Post-Discharge Recovery') ? condition : 'Cardiovascular Post-Discharge & Vascular Healing Protocol';
+    dietaryRationale = `Post-cardiac and vascular recovery requires nutritional therapy focused on endothelial healing, stabilizing arterial blood pressure, preventing stent thrombosis, and reducing arterial plaque vulnerability with a tailored ${dietaryPreference.toLowerCase()} profile.`;
+    foodsToEmphasize = [
+      proteinEmphasize,
+      { food: 'Omega-3 Rich Fats (Flaxseeds, Walnuts, Chia Seeds' + (isNonVeg ? ', Steamed Salmon)' : ')'), benefit: 'Inhibits platelet hyperactivity, soothes vascular inflammation, and supports arterial endothelial recovery.' },
+      { food: 'Soluble Beta-Glucan Oats & Whole Grains', benefit: 'Binds intestinal cholesterol and prevents blood sugar spikes that trigger vascular oxidative stress.' },
+      { food: 'Leafy Greens (Spinach, Methi, Steamed Broccoli)', benefit: 'Provides natural dietary nitrates and potassium to promote smooth arterial vasodilation and BP control.' },
+      { food: 'Antioxidant Berries (Blueberries, Pomegranate)', benefit: 'Polyphenols protect newly stented arterial walls from oxidative stress and microvascular damage.' }
+    ];
+    foodsToStrictlyAvoid = [
+      { food: 'High-Sodium Processed Foods (Pickles, Papads, Canned Soups, Chips)', reason: 'Excess sodium causes acute fluid retention, surges arterial blood pressure, and strains cardiovascular vessels.' },
+      { food: 'Commercial Trans Fats & Deep-Fried Foods', reason: 'Accelerates arterial plaque formation and increases the risk of in-stent restenosis.' },
+      { food: 'Grapefruit & Grapefruit Juice', reason: 'Inhibits CYP3A4 liver enzymes, causing dangerously high blood concentrations of statins and calcium-channel blockers.' },
+      { food: 'Refined White Sugar & Sweetened Sodas', reason: 'Triggers rapid endothelial inflammation and systemic metabolic strain.' }
+    ];
+    sampleMealPlan = {
+      breakfast: isNonVeg
+        ? 'Whole-grain toast with boiled eggs or poached salmon, avocado, walnuts, and fresh blueberries.'
+        : isEggetarian
+        ? 'Two soft poached eggs on whole-grain toast with sliced avocado, walnuts, and blueberries.'
+        : 'Warm steel-cut oats with almond milk, crushed walnuts, chia seeds, and fresh blueberries.',
+      midMorningSnack: 'Tender coconut water or green tea with a small handful of unsalted soaked almonds.',
+      lunch: isNonVeg
+        ? 'Grilled herb chicken breast or steamed salmon with brown rice, sautéed baby spinach, and cucumber salad.'
+        : isEggetarian
+        ? 'Steamed brown rice or phulkas with yellow moong dal, boiled egg curry, sautéed spinach, and cucumber salad.'
+        : 'Steamed brown rice or whole-wheat roti with lightly seasoned moong dal, sautéed spinach, and fresh cucumber salad.',
+      eveningSnack: 'Warm herbal hibiscus tea with roasted unsalted makhana (fox nuts).',
+      dinner: isNonVeg
+        ? 'Heart-healthy Mediterranean vegetable stew with grilled chicken strips, steamed broccoli, and olive oil drizzle.'
+        : isEggetarian
+        ? 'Heart-healthy vegetable stew with egg-white frittata, steamed broccoli, and olive oil drizzle.'
+        : 'Heart-healthy Mediterranean vegetable stew with tofu/paneer, steamed broccoli, and a drizzle of extra virgin olive oil.'
+    };
+    hydrationGoal = '2.0 to 2.5 Liters of water daily spaced evenly. Avoid chugging large amounts at once to protect arterial pressure.';
+  } else if (isOrthopedic) {
+    identifiedDisease = condition || 'Orthopedic Joint & Bone Tissue Recovery Protocol';
+    dietaryRationale = `Orthopedic joint recovery requires high-collagen synthesis precursors, calcium-phosphorus bone mineralization, and potent anti-inflammatory phytonutrients tailored to a ${dietaryPreference.toLowerCase()} regimen.`;
+    foodsToEmphasize = [
+      proteinEmphasize,
+      { food: 'Vitamin C Rich Citrus, Guava & Bell Peppers', benefit: 'Essential cofactor for biological collagen cross-linking and surgical wound tensile strength.' },
+      { food: 'Calcium & Vitamin D Fortified Foods / Sesame Seeds', benefit: 'Accelerates bone integration and prevents post-operative osteopenia.' },
+      { food: 'Turmeric & Ginger Golden Broths', benefit: 'Natural curcuminoids suppress COX-2 inflammatory pathways, reducing joint edema.' },
+      { food: 'High-Fiber Whole Grains & Prunes', benefit: 'Prevents narcotic and painkiller-induced post-operative constipation.' }
+    ];
+    foodsToStrictlyAvoid = [
+      { food: 'Alcohol & High-Proof Beverages', reason: 'Impairs osteoblast bone formation and dangerously potentiates post-op analgesics.' },
+      { food: 'Refined White Flours & High-Fructose Corn Syrup', reason: 'Elevates circulating CRP and interleukin-6, exacerbating surgical joint stiffness.' }
+    ];
+    sampleMealPlan = {
+      breakfast: isNonVeg
+        ? 'Scrambled eggs with bell peppers, whole-grain toast, and calcium-fortified beverage.'
+        : isEggetarian
+        ? 'High-protein scrambled eggs with turmeric, bell peppers, and fortified whole-grain toast.'
+        : 'High-protein scrambled tofu with turmeric, bell peppers, and fortified whole-grain toast.',
+      midMorningSnack: 'Greek yogurt or chia pudding with sliced papaya and soaked pumpkin seeds.',
+      lunch: isNonVeg
+        ? 'Grilled skinless chicken or steamed fish with quinoa, roasted chickpeas, kale, and lemon-tahini dressing.'
+        : isEggetarian
+        ? 'Quinoa bowl with boiled eggs, roasted chickpeas, steamed kale, carrots, and lemon-tahini dressing.'
+        : 'Quinoa bowl with roasted chickpeas, steamed kale, carrots, tofu, and lemon-tahini dressing.',
+      eveningSnack: 'Warm golden turmeric-ginger milk with crushed almonds.',
+      dinner: isNonVeg
+        ? 'Chicken bone broth with sweet potato, steamed green beans, and carrots.'
+        : isEggetarian
+        ? 'Egg-white vegetable frittata with sweet potato, green beans, and warm vegetable broth.'
+        : 'Hearty vegetable lentil soup with sweet potato and steamed green beans.'
+    };
+    hydrationGoal = '2.5 to 3.0 Liters daily to promote joint synovial fluid regeneration and flush post-op metabolites.';
+  } else {
+    // Default clinical protocol
+    identifiedDisease = condition || 'Clinical Post-Discharge Recovery Protocol';
+    dietaryRationale = `Clinically structured post-discharge ${dietaryPreference.toLowerCase()} recovery plan designed to optimize metabolic homeostasis, accelerate tissue repair, and protect against adverse food-drug interactions.`;
+    foodsToEmphasize = [
+      proteinEmphasize,
+      { food: 'Deep Green Leafy Vegetables (Spinach, Methi, Kale)', benefit: 'Rich in micronutrients, magnesium, and dietary nitrates for microvascular circulation.' },
+      { food: 'Whole Grain Complex Carbohydrates (Oats, Brown Rice, Millets)', benefit: 'Provides steady sustained energy without sharp glycemic fluctuations.' },
+      { food: 'Antioxidant-Rich Fresh Seasonal Fruits', benefit: 'Combats surgical oxidative stress and replenishes vital electrolyte reserves.' }
+    ];
+    foodsToStrictlyAvoid = [
+      { food: 'Excess Table Salt & High-Sodium Packaged Foods', reason: 'Triggers fluid retention, peripheral edema, and increases cardiovascular workload.' },
+      { food: 'Heavy Deep-Fried & Saturated Greasy Meals', reason: 'Delays gastric emptying, triggers digestive distress, and elevates systemic inflammation.' },
+      { food: 'Refined Sugars & Carbonated Beverages', reason: 'Impairs leukocyte wound-healing response and destabilizes energy levels.' }
+    ];
+    sampleMealPlan = {
+      breakfast: isNonVeg
+        ? 'Whole-grain toast with boiled eggs or lean shredded chicken, avocado, and fresh fruit.'
+        : isEggetarian
+        ? 'Two boiled or scrambled egg whites with whole-wheat toast, sliced avocado, and warm herbal tea.'
+        : 'Warm rolled oatmeal with sliced banana, flaxseeds, and low-fat fortified milk.',
+      midMorningSnack: 'Fresh tender coconut water or herbal tea with 5-6 soaked almonds.',
+      lunch: isNonVeg
+        ? 'Grilled lemon-herb chicken breast or baked fish with brown rice, steamed broccoli, and cucumber salad.'
+        : isEggetarian
+        ? 'Steamed whole-wheat roti or brown rice with yellow dal, boiled egg curry, and cucumber salad.'
+        : 'Steamed whole-wheat roti or brown rice with lightly spiced yellow dal, sautéed greens, and cucumber.',
+      eveningSnack: 'Light vegetable soup with roasted unsalted fox nuts (makhana).',
+      dinner: isNonVeg
+        ? 'Warm restorative chicken bone broth with steamed mixed vegetables and light quinoa.'
+        : isEggetarian
+        ? 'Egg-white frittata with spinach, mushrooms, steamed green beans, and warm vegetable broth.'
+        : 'Steamed mixed vegetables with seasoned tofu or paneer and a warm cup of vegetable broth.'
+    };
+    hydrationGoal = '2.0 to 2.5 Liters of water daily spaced evenly throughout morning and afternoon hours.';
+  }
+
+  return {
+    identifiedDisease,
+    dietaryRationale,
+    foodsToEmphasize,
+    foodsToStrictlyAvoid,
+    sampleMealPlan,
+    hydrationGoal
+  };
+}
+
 // 5. Condition-Specific Clinical Diet Planner
 app.post('/api/diet-plan', async (req, res) => {
   try {
     const { 
       condition, 
-      dietaryPreference = 'No restriction', 
+      dietaryPreference = 'Vegetarian', 
       allergies = 'None', 
       medications = [], 
       symptoms = '',
       prescriptionSummary = '',
       apiKey: bodyApiKey 
     } = req.body;
-    const passedApiKey = bodyApiKey || req.headers['x-gemini-api-key'] || null;
+    const passedApiKey = (bodyApiKey || req.headers['x-gemini-api-key'] || '').trim();
 
-    const systemPrompt = `You are CareBridge AI's Clinical Dietitian & Post-Discharge Nutrition Specialist.
-Generate evidence-based, medically safe nutritional advice tailored specifically to the patient's diagnosed disease, active medications, symptoms, dietary preferences, and allergies.
-Prioritize vascular healing, metabolic stability, avoiding adverse food-drug interactions, and tissue recovery.`;
+    let dietConstraintRule = '';
+    if (dietaryPreference === 'Vegetarian') {
+      dietConstraintRule = 'STRICTLY 100% VEGETARIAN (Pure Veg). All recommended foods, snacks, and meal options MUST be purely plant-based, dairy, grains, lentils, and legumes. ABSOLUTELY NO poultry, chicken, meat, fish, seafood, or eggs.';
+    } else if (dietaryPreference === 'Non-Vegetarian') {
+      dietConstraintRule = 'NON-VEGETARIAN. All recommended meals and high-protein foods MUST feature healthy lean animal proteins such as skinless chicken breast, steamed/baked fish (salmon, cod), bone broths, and lean meats, balanced with recovery vegetables.';
+    } else if (dietaryPreference === 'Eggetarian') {
+      dietConstraintRule = 'EGGETARIAN (Vegetarian + Eggs). All recommended meals and high-protein foods MUST combine wholesome vegetarian foods with whole eggs and egg whites (e.g. boiled eggs, poached eggs, egg-white scrambles, egg curry, omelettes). ABSOLUTELY NO chicken, poultry, meat, fish, or seafood.';
+    }
 
     const medsDescription = Array.isArray(medications) && medications.length > 0 
       ? medications.map(m => typeof m === 'string' ? m : `${m.name || m.drugName || 'Medication'} ${m.dosage || ''}`).join(', ')
       : 'None specified';
+
+    const systemPrompt = `You are CareBridge AI's Senior Clinical Dietitian & Post-Discharge Recovery Nutritionist.
+Generate evidence-based, medically safe nutritional advice tailored specifically to the patient's diagnosed disease, active medications, symptoms, and dietary preferences.
+Strictly adhere to the patient's selected dietary lifestyle (${dietaryPreference}) across all meals and recommendations.`;
 
     const userPrompt = `You are designing a clinical recovery diet based on the patient's prescription records:
 Documented Diagnosis / Disease: ${condition || 'Post-discharge medical/surgical recovery'}
 Prescribed Medications: ${medsDescription}
 Prescription Clinical Summary / Notes: ${prescriptionSummary || symptoms || 'General recovery'}
 Patient Symptoms / Context: ${symptoms || 'Outpatient post-discharge care'}
-Dietary Preference: ${dietaryPreference}
-Allergies / Intolerances: ${allergies}
+Dietary Preference Selected: ${dietaryPreference}
+CRITICAL DIETARY RULE: ${dietConstraintRule}
 
 TASK:
-1. Identify or infer the precise underlying disease, surgical condition, or clinical indication from the diagnosis and prescribed medications (e.g., Bacterial Infection, Cardiovascular Monitoring, Hypertension, Diabetes, Post-Surgical Healing).
+1. Identify or infer the precise underlying disease, surgical condition, or clinical indication from the diagnosis and prescribed medications (e.g., Acute Bronchial/Respiratory Infection, Bacterial Infection, Cardiovascular Monitoring, Hypertension, Diabetes, Post-Surgical Healing).
 2. Formulate a targeted clinical diet that promotes tissue recovery, supports immune/metabolic function, and strictly prevents adverse food-drug interactions (e.g. calcium/dairy interactions with antibiotics, potassium/sodium conflicts with cardiovascular meds).
+3. Ensure every single recommendation in foodsToEmphasize and sampleMealPlan (breakfast, midMorningSnack, lunch, eveningSnack, dinner) strictly complies with the ${dietaryPreference} rule!
 
 Respond in valid JSON with these exact keys:
 {
@@ -737,91 +1032,92 @@ Respond in valid JSON with these exact keys:
     {"food": "Name of food/drink", "reason": "Why it harms recovery or interacts with medication"}
   ],
   "sampleMealPlan": {
-    "breakfast": "Meal recommendation with timing",
-    "midMorningSnack": "Snack recommendation",
-    "lunch": "Lunch recommendation",
-    "eveningSnack": "Snack recommendation",
-    "dinner": "Dinner recommendation"
+    "breakfast": "Meal recommendation complying with ${dietaryPreference}",
+    "midMorningSnack": "Snack recommendation complying with ${dietaryPreference}",
+    "lunch": "Lunch recommendation complying with ${dietaryPreference}",
+    "eveningSnack": "Snack recommendation complying with ${dietaryPreference}",
+    "dinner": "Dinner recommendation complying with ${dietaryPreference}"
   },
-  "hydrationGoal": "e.g., 2.0 to 2.5 Liters daily unless contraindicated by heart/kidney protocol"
+  "hydrationGoal": "e.g., 2.0 to 2.5 Liters daily unless restricted by physician guidelines"
 }
 Return only JSON without markdown fences.`;
 
-    const rawResponse = await callGemini(userPrompt, systemPrompt, null, passedApiKey);
-    let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      if (match) {
-        try {
-          parsed = JSON.parse(match[0]);
-        } catch {
-          parsed = {};
+    // Try Gemini Live AI first if an API key is available
+    const geminiResult = await callGeminiRaw(userPrompt, systemPrompt, null, passedApiKey);
+
+    if (geminiResult && geminiResult.liveAi && geminiResult.text) {
+      let cleaned = geminiResult.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      let parsed = null;
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (match) {
+          try { parsed = JSON.parse(match[0]); } catch (_) {}
         }
-      } else {
-        parsed = {};
+      }
+
+      if (parsed && (parsed.dietaryRationale || parsed.foodsToEmphasize || parsed.sampleMealPlan)) {
+        // Robust Normalization
+        const rawEmphasize = parsed.foodsToEmphasize || parsed.recommended_foods || parsed.recommendedFoods || [];
+        const foodsToEmphasize = (Array.isArray(rawEmphasize) ? rawEmphasize : []).map(item => {
+          if (typeof item === 'string') {
+            const parts = item.split(/[:\-–—]/);
+            return parts.length > 1 ? { food: parts[0].trim(), benefit: parts.slice(1).join(':').trim() } : { food: item.trim(), benefit: 'Promotes tissue healing and clinical recovery' };
+          }
+          return { food: item.food || item.name || 'Recommended Nutrient', benefit: item.benefit || item.reason || 'Supports recovery protocol' };
+        });
+
+        const rawAvoid = parsed.foodsToStrictlyAvoid || parsed.foods_to_avoid || [];
+        const foodsToStrictlyAvoid = (Array.isArray(rawAvoid) ? rawAvoid : []).map(item => {
+          if (typeof item === 'string') {
+            const parts = item.split(/[:\-–—]/);
+            return parts.length > 1 ? { food: parts[0].trim(), reason: parts.slice(1).join(':').trim() } : { food: item.trim(), reason: 'May impair recovery or cause adverse drug interactions' };
+          }
+          return { food: item.food || item.name || 'Restricted Item', reason: item.reason || item.benefit || 'Interferes with clinical recovery' };
+        });
+
+        const normalizedData = {
+          identifiedDisease: parsed.identifiedDisease || parsed.extractedDisease || condition || 'Post-Discharge Recovery',
+          dietaryRationale: parsed.dietaryRationale || 'Targeted nutritional strategy to support cellular healing and post-discharge recovery.',
+          foodsToEmphasize: foodsToEmphasize.length > 0 ? foodsToEmphasize : [
+            { food: "Nutrient-Dense Whole Foods", benefit: "Supports cellular regeneration and maintains electrolyte balance." }
+          ],
+          foodsToStrictlyAvoid: foodsToStrictlyAvoid.length > 0 ? foodsToStrictlyAvoid : [
+            { food: "Ultra-Processed High-Sodium Foods", reason: "Causes fluid retention and increases cardiovascular stress." }
+          ],
+          sampleMealPlan: parsed.sampleMealPlan || parsed.meal_schedule || {
+            breakfast: "Nutritious balanced breakfast",
+            lunch: "Wholesome clinical lunch",
+            eveningSnack: "Light recovery snack",
+            dinner: "Digestible restorative dinner"
+          },
+          hydrationGoal: parsed.hydrationGoal || '2.0 - 2.5 Liters of water daily unless restricted by physician.'
+        };
+
+        return res.json({
+          success: true,
+          data: normalizedData,
+          aiSource: `Google Gemini AI (${geminiResult.modelUsed || 'Live'})`,
+          isLiveGemini: true
+        });
       }
     }
 
-    // Robust Normalization: Ensure foodsToEmphasize is an array of { food, benefit }
-    const rawEmphasize = parsed.foodsToEmphasize || parsed.recommended_foods || parsed.recommendedFoods || parsed.foodsToInclude || [];
-    const foodsToEmphasize = (Array.isArray(rawEmphasize) ? rawEmphasize : []).map(item => {
-      if (typeof item === 'string') {
-        const parts = item.split(/[:\-–—]/);
-        if (parts.length > 1) {
-          return { food: parts[0].trim(), benefit: parts.slice(1).join(':').trim() };
-        }
-        return { food: item.trim(), benefit: 'Promotes tissue healing and clinical recovery' };
-      }
-      return {
-        food: item.food || item.name || item.title || item.item || 'Recommended Nutrient',
-        benefit: item.benefit || item.reason || item.description || 'Supports recovery protocol'
-      };
+    // High-precision Clinical Fallback Engine (when Gemini API key is absent or unreachable)
+    const clinicalData = buildClinicalDietPlan({
+      condition,
+      medications,
+      dietaryPreference,
+      symptoms,
+      prescriptionSummary
     });
 
-    // Robust Normalization: Ensure foodsToStrictlyAvoid is an array of { food, reason }
-    const rawAvoid = parsed.foodsToStrictlyAvoid || parsed.foods_to_avoid || parsed.foodsToAvoid || [];
-    const foodsToStrictlyAvoid = (Array.isArray(rawAvoid) ? rawAvoid : []).map(item => {
-      if (typeof item === 'string') {
-        const parts = item.split(/[:\-–—]/);
-        if (parts.length > 1) {
-          return { food: parts[0].trim(), reason: parts.slice(1).join(':').trim() };
-        }
-        return { food: item.trim(), reason: 'May impair recovery or cause adverse drug interactions' };
-      }
-      return {
-        food: item.food || item.name || item.title || item.item || 'Restricted Item',
-        reason: item.reason || item.benefit || item.description || 'Interferes with clinical recovery'
-      };
-    });
-
-    const normalizedData = {
-      identifiedDisease: parsed.identifiedDisease || parsed.extractedDisease || condition || 'Post-Discharge Recovery',
-      dietaryRationale: parsed.dietaryRationale || parsed.rationale || 'Targeted nutritional strategy to support cellular healing, hemodynamic balance, and post-discharge vitality.',
-      foodsToEmphasize: foodsToEmphasize.length > 0 ? foodsToEmphasize : [
-        { food: "Nutrient-Dense Whole Foods", benefit: "Supports cellular regeneration and maintains electrolyte balance." },
-        { food: "Hydrating Leafy Greens", benefit: "Supplies essential micronutrients and promotes microvascular blood flow." }
-      ],
-      foodsToStrictlyAvoid: foodsToStrictlyAvoid.length > 0 ? foodsToStrictlyAvoid : [
-        { food: "Ultra-Processed High-Sodium Foods", reason: "Causes fluid retention and increases cardiovascular stress." },
-        { food: "Refined Sugars & Trans Fats", reason: "Triggers systemic inflammation and delays wound repair." }
-      ],
-      sampleMealPlan: parsed.sampleMealPlan || parsed.meal_schedule || {
-        breakfast: "Warm steel-cut oatmeal with fruit and seeds",
-        lunch: "Lightly seasoned lentils with steamed vegetables and whole grains",
-        eveningSnack: "Herbal tea with a handful of soaked almonds",
-        dinner: "Steamed vegetables with lean protein broth"
-      },
-      hydrationGoal: parsed.hydrationGoal || parsed.hydration_plan || '2.0 - 2.5 Liters of water daily unless restricted by physician.'
-    };
-
-    const hasLiveKey = Boolean((passedApiKey || process.env.GEMINI_API_KEY || '').trim());
     res.json({
       success: true,
-      data: normalizedData,
-      aiSource: hasLiveKey ? 'Google Gemini AI' : 'CareBridge Clinical Nutritionist'
+      data: clinicalData,
+      aiSource: 'CareBridge Clinical Nutritionist',
+      isLiveGemini: false
     });
   } catch (error) {
     console.error('Diet plan error:', error);
