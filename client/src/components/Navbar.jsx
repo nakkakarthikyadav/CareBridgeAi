@@ -281,7 +281,7 @@ export default function Navbar({
               }}
             >
               <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{alertsEnabled ? '🔔' : '🔕'}</span>
-              <span className="desktop-only" style={{ fontSize: '0.8rem', fontWeight: 800 }}>
+              <span className="desktop-only alerts-toggle-text" style={{ fontSize: '0.8rem', fontWeight: 800 }}>
                 {alertsEnabled ? 'Alerts ON' : 'Alerts OFF'}
               </span>
               {alertsEnabled && (

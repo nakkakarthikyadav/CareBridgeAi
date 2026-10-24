@@ -299,7 +299,6 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  min-width: 0;
 }
 
 html,
@@ -351,7 +350,7 @@ body {
   cursor: pointer;
   text-decoration: none;
   flex-shrink: 0;
-  margin-right: 2.5rem;
+  margin-right: clamp(1rem, 1.8vw, 2.5rem);
 }
 
 .logo-cross-icon {
@@ -381,21 +380,33 @@ body {
 .nav-menu-dribbble {
   display: flex;
   align-items: center;
-  gap: 1.75rem;
+  gap: clamp(0.75rem, 1.2vw, 1.5rem);
   list-style: none;
+  flex-shrink: 0;
+}
+
+.nav-menu-dribbble li {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .nav-link-btn {
   background: none;
   border: none;
   font-family: inherit;
-  font-size: 0.925rem;
+  font-size: clamp(0.825rem, 0.9vw, 0.925rem);
   font-weight: 600;
   color: #475569;
   cursor: pointer;
   transition: var(--transition);
-  padding: 4px 0;
+  padding: 6px 2px;
   position: relative;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
 }
 
 .nav-link-btn:hover,
@@ -428,11 +439,11 @@ body {
 .search-box-pill {
   background: #f1f5f9;
   border-radius: 9999px;
-  padding: 6px 14px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 170px;
+  width: 130px;
   border: 1px solid transparent;
   transition: var(--transition);
 }
@@ -441,7 +452,7 @@ body {
   border-color: #4f46e5;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-  width: 190px;
+  width: 160px;
 }
 
 .search-box-pill input {
@@ -1606,14 +1617,46 @@ body {
   margin-bottom: 2rem;
 }
 
-/* Tablets and small laptops (<= 1024px) */
-@media (max-width: 1024px) {
+/* Medium Laptops & Compact Desktops (<= 1280px) */
+@media (max-width: 1280px) {
   .nav-menu-dribbble {
-    gap: 1rem;
+    gap: 0.65rem;
   }
 
   .nav-link-btn {
-    font-size: 0.85rem;
+    font-size: 0.825rem;
+  }
+
+  .theme-toggle-text,
+  .alerts-toggle-text {
+    display: none !important;
+  }
+
+  .search-box-pill {
+    width: 110px;
+  }
+}
+
+/* Tablets and small laptops (<= 1100px) */
+@media (max-width: 1100px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .nav-menu-dribbble {
+    display: none !important;
+  }
+
+  .mobile-hamburger-btn {
+    display: flex !important;
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .logo-dribbble {
+    margin-right: 0 !important;
   }
 
   .quick-action-row {
@@ -1655,29 +1698,6 @@ body {
 
   .workspace-body {
     padding: 2rem 1.5rem;
-  }
-}
-
-/* All Tablet & Mobile Devices (<= 900px) */
-@media (max-width: 900px) {
-  .desktop-only {
-    display: none !important;
-  }
-
-  .nav-menu-dribbble {
-    display: none !important;
-  }
-
-  .mobile-hamburger-btn {
-    display: flex !important;
-    width: 36px !important;
-    height: 36px !important;
-    font-size: 1.15rem !important;
-    flex-shrink: 0 !important;
-  }
-
-  .logo-dribbble {
-    margin-right: 0 !important;
   }
 }
 
