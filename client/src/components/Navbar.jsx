@@ -133,7 +133,7 @@ export default function Navbar({
         <div 
           className="logo-dribbble" 
           onClick={() => scrollToSection('home', 'hero-section')}
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginRight: '3rem', flexShrink: 0 }}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flexShrink: 0 }}
         >
           <div className="logo-cross-icon" style={{
             width: '34px',
@@ -397,31 +397,24 @@ export default function Navbar({
             <button
               className="btn-signin-pill"
               onClick={openProfileModal}
-              style={{
-                background: '#0f172a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
+              title="Sign in to your patient account"
             >
+              <span className="signin-icon" style={{ fontSize: '0.9rem' }}>🔑</span>
               <span>Sign In</span>
             </button>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               {onOpenDashboard && (
                 <button
                   type="button"
+                  className="btn-nav-dashboard desktop-only"
                   onClick={onOpenDashboard}
                   style={{
                     background: '#0f172a',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
-                    padding: '8px 16px',
+                    padding: '7px 14px',
                     fontSize: '0.825rem',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -440,11 +433,42 @@ export default function Navbar({
                 <button
                   className="user-pill-btn"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '9999px',
+                    padding: '4px 8px 4px 4px',
+                    cursor: 'pointer'
+                  }}
                 >
-                  <div className="user-avatar-initials">
+                  <div className="user-avatar-initials" style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: '#4f46e5',
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
                     {getInitials(userProfile.name)}
                   </div>
-                  <span className="user-name-text">{userProfile.name}</span>
+                  <span className="user-name-text desktop-only" style={{
+                    fontSize: '0.825rem',
+                    fontWeight: 700,
+                    color: '#1e293b',
+                    maxWidth: '90px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {userProfile.name}
+                  </span>
                   <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>⌵</span>
                 </button>
 
@@ -514,6 +538,102 @@ export default function Navbar({
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer">
+          {/* Sign In CTA Banner at top of Mobile Menu if not logged in */}
+          {!userProfile?.isLoggedIn && !userProfile?.name ? (
+            <div style={{
+              background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)',
+              border: '1.5px solid #c7d2fe',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🔑</span> Patient Sign In
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#4338ca' }}>
+                  Access your prescriptions & alarms
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openProfileModal();
+                }}
+                style={{
+                  background: '#4f46e5',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '7px 14px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 8px rgba(79, 70, 229, 0.35)'
+                }}
+              >
+                Sign In →
+              </button>
+            </div>
+          ) : (
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '10px 14px',
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: '#4f46e5',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {getInitials(userProfile.name)}
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>{userProfile.name}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>● Active Patient</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openProfileModal();
+                }}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: '#475569',
+                  cursor: 'pointer'
+                }}
+              >
+                Edit Profile
+              </button>
+            </div>
+          )}
+
           <ul className="mobile-nav-list">
             <li>
               <button
@@ -574,18 +694,32 @@ export default function Navbar({
           </ul>
 
           <div className="mobile-drawer-footer">
-            {userProfile?.isLoggedIn && onOpenDashboard && (
+            {!userProfile?.isLoggedIn && !userProfile?.name ? (
               <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  onOpenDashboard();
+                  openProfileModal();
                 }}
                 className="btn-mobile-action"
                 style={{ background: '#4f46e5', color: '#ffffff', fontWeight: 800 }}
               >
-                📊 Open Recovery Dashboard
+                🔑 Sign In to Patient Account
               </button>
+            ) : (
+              onOpenDashboard && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenDashboard();
+                  }}
+                  className="btn-mobile-action"
+                  style={{ background: '#4f46e5', color: '#ffffff', fontWeight: 800 }}
+                >
+                  📊 Open Recovery Dashboard
+                </button>
+              )
             )}
 
             <button
