@@ -212,8 +212,8 @@ export default function DietPlannerView() {
         {/* Prescription-Linked Clinical Profile */}
         {detectedRx ? (
           <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
+            background: 'var(--bg-card, #ffffff)',
+            border: '1px solid var(--border-light, #e2e8f0)',
             borderLeft: '5px solid #10b981',
             borderRadius: 'var(--radius-lg)',
             padding: '1.4rem 1.6rem',
@@ -248,16 +248,16 @@ export default function DietPlannerView() {
               </button>
             </div>
 
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: '4px 0 10px 0' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--navy, #0f172a)', margin: '4px 0 10px 0' }}>
               {condition || detectedRx.diagnosis || detectedRx.title}
             </div>
 
             {detectedRx.medications && detectedRx.medications.length > 0 && (
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginTop: '10px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+              <div style={{ background: 'var(--bg-subtle, #f8fafc)', border: '1px solid var(--border-light, #e2e8f0)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginTop: '10px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted, #64748b)', display: 'block', marginBottom: '4px' }}>
                   💊 Evaluated Medications for Food-Drug Interactions:
                 </span>
-                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--navy, #1e293b)' }}>
                   {detectedRx.medications.map(m => `${m.name || m.drugName || 'Medication'} ${m.dosage && m.dosage !== 'As directed' ? `(${m.dosage})` : ''}`).join(' • ')}
                 </span>
               </div>

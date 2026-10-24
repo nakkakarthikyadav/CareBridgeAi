@@ -469,26 +469,16 @@ export default function TimelineView({ setToastMessage }) {
         <div className="checklist-column">
           
           {/* Live In-App Alarm & Scheduler Monitor Banner */}
-          <div style={{
-            background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
-            border: '1px solid #a7f3d0',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1rem 1.25rem',
-            marginBottom: '1.25rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)'
-          }}>
+          <div className="timeline-alarm-banner">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }}></span>
-                <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#065f46' }}>
+                <span className="timeline-alarm-title">
                   Smart Medication Alarm Engine: Active
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#047857', background: '#d1fae5', padding: '3px 10px', borderRadius: '6px' }}>
+                <span className="timeline-alarm-clock">
                   🕒 Clock: {currentTimeStr}
                 </span>
                 <button
@@ -515,8 +505,8 @@ export default function TimelineView({ setToastMessage }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '0.8rem', color: '#047857' }}>
-              <span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+              <span className="timeline-alarm-desc">
                 Monitors checklist every 3s. Automatically triggers an audible chime, push notification, and in-app dose alert modal when scheduled times arrive.
               </span>
               {typeof Notification !== 'undefined' && notifPermission !== 'granted' && (
@@ -543,26 +533,17 @@ export default function TimelineView({ setToastMessage }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '1.4rem' }}>💊</span>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--navy)', margin: 0 }}>
+              <h3 className="timeline-section-title">
                 Daily Medication Schedule
               </h3>
             </div>
 
             <button
               type="button"
+              className="btn-step-action"
               onClick={() => setShowAddForm(!showAddForm)}
-              style={{
-                background: '#eef2ff',
-                color: '#4f46e5',
-                border: '1px solid #c7d2fe',
-                borderRadius: '8px',
-                padding: '6px 14px',
-                fontSize: '0.825rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
             >
-              {showAddForm ? '✕ Close Form' : '➕ Add Medication'}
+              <span>{showAddForm ? '✕ Close Form' : '➕ Add Medication'}</span>
             </button>
           </div>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
@@ -571,13 +552,7 @@ export default function TimelineView({ setToastMessage }) {
 
           {/* Add Item Form */}
           {showAddForm && (
-            <form onSubmit={handleAddItem} style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: 'var(--radius-md)',
-              padding: '1.25rem',
-              marginBottom: '1.5rem'
-            }}>
+            <form onSubmit={handleAddItem} className="portal-form-card">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '10px', marginBottom: '10px' }}>
                 <input
                   type="text"
@@ -700,15 +675,18 @@ export default function TimelineView({ setToastMessage }) {
           <div style={{ marginBottom: '1.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.85rem' }}>
               <span style={{ fontSize: '1.25rem' }}>💊</span>
-              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)' }}>
+              <h4 className="timeline-section-title" style={{ fontSize: '1.15rem' }}>
                 Confirmed Medications
               </h4>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {meds.length === 0 ? (
-                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #cbd5e1', background: '#f8fafc', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
-                  ⚪ No medications in checklist yet. Use "+ Add Item" or upload a prescription.
+                <div className="portal-empty-card" style={{ padding: '1.5rem', margin: 0 }}>
+                  <span style={{ fontSize: '1.5rem' }}>💊</span>
+                  <div className="portal-empty-card-desc" style={{ margin: '6px 0 0 0', fontWeight: 700 }}>
+                    No medications in checklist yet. Use "+ Add Medication" or upload a prescription.
+                  </div>
                 </div>
               ) : (
                 meds.map(item => {
@@ -717,18 +695,7 @@ export default function TimelineView({ setToastMessage }) {
                     <div 
                       key={item.id}
                       onClick={() => toggleItem(item.id, 'meds')}
-                      style={{
-                        background: item.done ? '#f8fafc' : '#ffffff',
-                        border: `1px solid ${item.done ? '#bbf7d0' : '#e2e8f0'}`,
-                        borderRadius: 'var(--radius-md)',
-                        padding: '12px 14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: item.done ? 'none' : '0 1px 3px rgba(0,0,0,0.03)'
-                      }}
+                      className={`timeline-med-card ${item.done ? 'done' : ''}`}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                         <input 
@@ -737,21 +704,15 @@ export default function TimelineView({ setToastMessage }) {
                           onChange={() => {}} 
                           style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4f46e5', flexShrink: 0 }}
                         />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                          <span style={{ 
-                            fontSize: '0.92rem', 
-                            fontWeight: 700, 
-                            color: item.done ? '#15803d' : 'var(--navy)',
-                            textDecoration: item.done ? 'line-through' : 'none',
-                            wordBreak: 'break-word'
-                          }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+                          <span className="timeline-med-title">
                             {label}
                           </span>
                           {(item.time || item.dose || item.schedule || item.instructions) && (
-                            <span style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span className="timeline-med-meta">
                               {item.time && (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                  <span style={{ fontWeight: 700, color: '#4f46e5' }}>⏰ {item.time}</span>
+                                  <span className="timeline-med-time">⏰ {item.time}</span>
                                   {/(am|pm)/i.test(item.time) && (
                                     <button
                                       type="button"
@@ -849,46 +810,26 @@ export default function TimelineView({ setToastMessage }) {
           </div>
 
           {/* Adherence Streak Badge */}
-          <div style={{
-            background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-            color: '#4338ca',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 16px',
-            fontWeight: 800,
-            fontSize: '0.9rem',
-            textAlign: 'center',
-            border: '1px solid #c7d2fe',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}>
+          <div className="timeline-streak-badge">
             <span>{completedCount > 0 ? '🔥' : '🌱'}</span>
             <span>{completedCount > 0 && adherenceRate === 100 ? '100% Adherence Milestone Reached' : `${completedCount} of ${totalCount} Doses Taken Today`}</span>
           </div>
 
           {/* Recent Activity Log */}
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid var(--border-light)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1.25rem',
-            marginBottom: '1.5rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.95rem', color: 'var(--navy)', marginBottom: '0.75rem' }}>
+          <div className="timeline-log-box">
+            <div className="timeline-log-box-title">
               <span>🕒</span>
               <span>Recent Activity Log</span>
             </div>
 
             {activityLogs.length === 0 ? (
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
                 ⚪ No activity recorded yet today. Check off your first task on the left to start tracking!
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {activityLogs.map((log, idx) => (
-                  <div key={idx} style={{ fontSize: '0.825rem', color: '#334155', background: '#f8fafc', padding: '6px 10px', borderRadius: 'var(--radius-sm)' }}>
+                  <div key={idx} className="timeline-log-item">
                     • {log}
                   </div>
                 ))}
@@ -923,21 +864,8 @@ export default function TimelineView({ setToastMessage }) {
 
             <button
               type="button"
+              className="btn-timeline-reset"
               onClick={handleReset}
-              style={{
-                background: '#ffffff',
-                color: '#64748b',
-                border: '1px solid #e2e8f0',
-                borderRadius: 'var(--radius-md)',
-                padding: '12px 16px',
-                fontWeight: 700,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
             >
               <span>🔄</span> Reset Checklist
             </button>
