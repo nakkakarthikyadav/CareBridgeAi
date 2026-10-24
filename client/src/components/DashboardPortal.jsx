@@ -151,8 +151,13 @@ export default function DashboardPortal({
       try {
         const saved = localStorage.getItem('carebridge_meds_checklist');
         const existing = saved ? JSON.parse(saved) : [];
-        const merged = [...newMeds, ...existing.filter(e => !newMeds.some(m => m.title === e.title))];
+        const cleanExisting = existing.filter(e => 
+          !['m1', 'm2', 'm3', 'm4'].includes(e.id) &&
+          !e.title?.toLowerCase().includes('pantoprazole 40')
+        );
+        const merged = [...newMeds, ...cleanExisting.filter(e => !newMeds.some(m => m.title === e.title))];
         localStorage.setItem('carebridge_meds_checklist', JSON.stringify(merged));
+        window.dispatchEvent(new Event('carebridge_meds_updated'));
       } catch (err) {
         console.error('Failed to sync checklist', err);
       }

@@ -141,7 +141,12 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
         if (newChecklistMeds.length > 0) {
           const savedMeds = localStorage.getItem('carebridge_meds_checklist');
           const listMeds = savedMeds ? JSON.parse(savedMeds) : [];
-          localStorage.setItem('carebridge_meds_checklist', JSON.stringify([...newChecklistMeds, ...listMeds]));
+          const cleanExisting = listMeds.filter(m => 
+            !['m1', 'm2', 'm3', 'm4'].includes(m.id) &&
+            !m.title?.toLowerCase().includes('pantoprazole 40')
+          );
+          localStorage.setItem('carebridge_meds_checklist', JSON.stringify([...newChecklistMeds, ...cleanExisting.filter(e => !newChecklistMeds.some(m => m.title === e.title))]));
+          window.dispatchEvent(new Event('carebridge_meds_updated'));
         }
       } catch (err) {
         console.error('Failed to auto-save prescription to localStorage', err);

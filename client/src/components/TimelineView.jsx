@@ -20,26 +20,12 @@ const getItemLabel = (item) => {
 export default function TimelineView({ setToastMessage }) {
   const [meds, setMeds] = useState(() => {
     try {
-      const saved = localStorage.getItem('carebridge_meds_checklist');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const filtered = parsed.filter(m => !['m1', 'm2', 'm3', 'm4'].includes(m.id));
-        if (filtered.length > 0) {
-          return filtered.map(m => {
-            const label = getItemLabel(m) || 'Prescribed Medication';
-            return {
-              ...m,
-              title: label,
-              text: label
-            };
-          });
-        }
-      }
-      // Automatic sync from latest prescriptions
+      // 1. Check for real uploaded prescriptions
       const rxSaved = localStorage.getItem('carebridge_portal_prescriptions');
+      let rxExtracted = [];
       if (rxSaved) {
         const rxs = JSON.parse(rxSaved).filter(p => p.id !== 'rx_1' && p.id !== 'rx_2' && !(p.title === 'Hospital Discharge Prescription' && p.doctor === 'Attending Physician' && !p.imagePreview));
-        const extracted = rxs.flatMap(rx => (rx.medications || []).map((m, idx) => {
+        rxExtracted = rxs.flatMap(rx => (rx.medications || []).map((m, idx) => {
           const drugName = m.name || m.drugName || 'Medication';
           const hasDosage = m.dosage && (drugName.toLowerCase().includes(m.dosage.toLowerCase().replace(/\s+/g, '')) || drugName.toLowerCase().includes(m.dosage.toLowerCase()));
           const dosageStr = (m.dosage && m.dosage !== 'As directed' && !hasDosage) ? ` ${m.dosage}` : '';
@@ -56,8 +42,27 @@ export default function TimelineView({ setToastMessage }) {
             alarmEnabled: true
           };
         }));
-        if (extracted.length > 0) return extracted;
       }
+
+      // 2. Check saved checklist
+      const saved = localStorage.getItem('carebridge_meds_checklist');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const filtered = parsed.filter(m => !['m1', 'm2', 'm3', 'm4'].includes(m.id));
+        const hasRealMeds = filtered.some(m => !m.title?.toLowerCase().includes('pantoprazole 40'));
+        if (filtered.length > 0 && (hasRealMeds || rxExtracted.length === 0)) {
+          return filtered.map(m => {
+            const label = getItemLabel(m) || 'Prescribed Medication';
+            return {
+              ...m,
+              title: label,
+              text: label
+            };
+          });
+        }
+      }
+
+      if (rxExtracted.length > 0) return rxExtracted;
     } catch {}
     return [];
   });

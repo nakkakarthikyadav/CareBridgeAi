@@ -13,6 +13,7 @@ import {
   handleUpdateProfile
 } from './auth.js';
 import v1Router from './api_v1.js';
+import { processPrescriptionImage, processDocumentImage } from './ocrEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -382,76 +383,81 @@ app.post('/api/handwritten-ocr', upload.single('prescriptionImage'), async (req,
     }
 
     const passedApiKey = req.body?.apiKey || req.headers['x-gemini-api-key'] || null;
-    const fileData = {
-      mimeType: req.file.mimetype,
-      base64: req.file.buffer.toString('base64')
-    };
+    const effectiveApiKey = (passedApiKey || process.env.GEMINI_API_KEY || '').trim();
+    let parsed = null;
 
-    const systemPrompt = `You are an automated Optical Character Recognition (OCR) and Handwritten Text Recognition (HTR) system specializing in physician handwriting identification and transcription, inspired by CRNN-CTC handwriting recognition pipelines.
-Your task is to accurately transcribe messy cursive medical handwriting from the prescription image into normal, clear, typed digital text.
-You must expand all medical abbreviations (e.g. Rx, tid, bid, od, sos, po, hs) and correct common handwriting misinterpretations using a medical lexicon.`;
+    // 1. Try Gemini Vision if API key is configured
+    if (effectiveApiKey && effectiveApiKey !== 'your_gemini_api_key_here') {
+      try {
+        const fileData = {
+          mimeType: req.file.mimetype,
+          base64: req.file.buffer.toString('base64')
+        };
 
-    const userPrompt = `Analyze this handwritten prescription image.
-Perform automated line-level and word-level recognition.
+        const systemPrompt = `You are an automated Optical Character Recognition (OCR) and Handwritten Text Recognition (HTR) system specializing in physician handwriting identification and transcription.
+Your task is to accurately transcribe medical handwriting and prescription documents into normal, clear, typed digital text.
+Extract all prescribed medications, dosages, routes, frequencies, and instructions accurately.`;
 
-Return a valid JSON response with the following format:
+        const userPrompt = `Analyze this prescription image. Return a clean valid JSON response with keys:
 {
-  "detectedDoctor": "Doctor name and credentials detected",
-  "detectedClinic": "Clinic or hospital header name",
-  "hospitalName": "Hospital or clinic name extracted from prescription header/letterhead",
-  "hospitalPhone": "Contact or emergency telephone/mobile number of the clinic/hospital or doctor printed or written on the prescription (e.g. +91 9876543210, 080-23456789, or 555-0198). If none found, write empty string",
-  "prescriptionDate": "Date on prescription",
-  "patientName": "Patient name and age",
-  "detectedDisease": "Suspected or written disease, clinical condition, or diagnosis inferred from prescription and medications (e.g. Acute Bronchitis, Hypertension, Post-Surgical Healing)",
-  "rawHandwrittenLines": [
-    "Exact verbatim line 1 transcribed from handwriting",
-    "Exact verbatim line 2 transcribed from handwriting"
-  ],
-  "normalizedDigitalText": "Clean, polished normal typed text ready to print or email",
+  "detectedDoctor": "Physician name",
+  "detectedClinic": "Hospital / Clinic name",
+  "hospitalPhone": "Physician or hospital phone number",
+  "prescriptionDate": "Date of prescription",
+  "patientName": "Patient name",
+  "detectedDisease": "Suspected condition or diagnosis",
   "medicationsList": [
     {
-      "drugName": "Medication brand / generic name",
-      "dosage": "Dosage (e.g. 500mg)",
-      "frequency": "Frequency in plain English (e.g. Three times daily)",
-      "duration": "Duration (e.g. 7 days)",
-      "instructions": "e.g. Take with water after meals",
-      "caution": "Special precautions or warnings"
+      "drugName": "Medication name",
+      "dosage": "Dosage (e.g. 1 tablet, 500mg)",
+      "frequency": "Frequency (e.g. Every 4 hours, Once a day)",
+      "duration": "Duration",
+      "instructions": "Directions for use",
+      "caution": "Warnings or precautions"
     }
   ],
-  "abbreviationsExpanded": [
-    {"abbreviation": "tid", "meaning": "Ter in die (Three times a day)"},
-    {"abbreviation": "sos", "meaning": "Si opus sit (If needed for symptoms)"},
-    {"abbreviation": "od", "meaning": "Omni die (Once a day)"}
-  ],
-  "confidenceScore": "96.4%"
+  "normalizedDigitalText": "Clean summary text",
+  "confidenceScore": "98.5%"
 }
 Return only JSON without markdown fences.`;
 
-    const rawResponse = await callGemini(userPrompt, systemPrompt, fileData, passedApiKey);
-    let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-      if (!parsed.hospitalPhone) {
-        const textToSearch = `${parsed.detectedClinic || ''} ${parsed.normalizedDigitalText || ''} ${(parsed.rawHandwrittenLines || []).join(' ')}`;
-        const phoneMatch = textToSearch.match(/(?:tel|phone|ph|mob|emergency|contact|call)[\s.:#-]*([+]?[\d\s().-]{7,18}\d)/i) ||
-                           textToSearch.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/) ||
-                           textToSearch.match(/\b[6-9]\d{9}\b/);
-        if (phoneMatch) {
-          parsed.hospitalPhone = (phoneMatch[1] || phoneMatch[0]).trim();
+        const rawResponse = await callGemini(userPrompt, systemPrompt, fileData, effectiveApiKey);
+        let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const jsonCandidate = JSON.parse(cleaned);
+
+        // Check if Gemini actually returned meaningful real data (and not the generic fallback)
+        if (jsonCandidate && jsonCandidate.medicationsList && jsonCandidate.medicationsList.length > 0 && jsonCandidate.detectedDoctor !== 'Dr. Eleanor Vance, MD (Internal Medicine)') {
+          parsed = jsonCandidate;
         }
+      } catch (geminiErr) {
+        console.warn('[Handwritten OCR] Gemini call failed, falling back to Native OCR:', geminiErr.message);
       }
-      if (!parsed.medications && parsed.medicationsList) {
-        parsed.medications = parsed.medicationsList.map(m => ({
-          name: m.drugName || m.name,
-          dosage: m.dosage || '',
-          schedule: m.frequency || m.schedule || '',
-          instructions: m.instructions || '',
-          purpose: m.caution || ''
-        }));
-      }
-    } catch {
-      parsed = { rawText: rawResponse };
+    }
+
+    // 2. High-Precision Native Windows OCR (Offline, fast, and extracts all tablets directly from image)
+    if (!parsed || !parsed.medicationsList || parsed.medicationsList.length === 0) {
+      console.log('[Handwritten OCR] Running native Windows OCR on uploaded prescription image...');
+      parsed = await processPrescriptionImage(req.file.buffer);
+    }
+
+    // Harmonize keys for frontend compatibility
+    if (!parsed.medications && parsed.medicationsList) {
+      parsed.medications = parsed.medicationsList.map(m => ({
+        name: m.drugName || m.name,
+        dosage: m.dosage || '',
+        schedule: m.frequency || m.schedule || '',
+        instructions: m.instructions || '',
+        purpose: m.caution || ''
+      }));
+    }
+    if (!parsed.medicationsList && parsed.medications) {
+      parsed.medicationsList = parsed.medications.map(m => ({
+        drugName: m.name,
+        dosage: m.dosage || '',
+        frequency: m.schedule || '',
+        instructions: m.instructions || '',
+        caution: m.criticalWarning || m.purpose || ''
+      }));
     }
 
     res.json({ success: true, data: parsed });
@@ -466,28 +472,33 @@ app.post('/api/analyze-document', upload.single('file'), async (req, res) => {
   try {
     const { textContent, language = 'English', docType = 'Discharge Summary' } = req.body;
     const passedApiKey = req.body?.apiKey || req.headers['x-gemini-api-key'] || null;
-    let fileData = null;
+    const effectiveApiKey = (passedApiKey || process.env.GEMINI_API_KEY || '').trim();
+    let parsed = null;
 
-    if (req.file) {
-      fileData = {
-        mimeType: req.file.mimetype,
-        base64: req.file.buffer.toString('base64')
-      };
-    }
+    // 1. Try Gemini if API key is configured
+    if (effectiveApiKey && effectiveApiKey !== 'your_gemini_api_key_here') {
+      try {
+        let fileData = null;
+        if (req.file) {
+          fileData = {
+            mimeType: req.file.mimetype,
+            base64: req.file.buffer.toString('base64')
+          };
+        }
 
-    const systemPrompt = `You are CareBridge AI, a clinical medical communication assistant.
+        const systemPrompt = `You are CareBridge AI, a clinical medical communication assistant.
 You translate complex hospital discharge documents and handwritten prescriptions into plain, empathetic, crystal-clear instructions for patients and their families.
 Always prioritize safety, detect potential medication confusion, highlight red flags, and provide actionable next steps.
 Language requested: ${language}.`;
 
-    const userPrompt = `Please analyze this medical document (${docType}):
+        const userPrompt = `Please analyze this medical document (${docType}):
 ${textContent ? `DOCUMENT CONTENT:\n${textContent}\n` : 'Document provided as attached image/file.'}
 
 Provide a structured response in clean JSON format with these exact keys:
 {
   "summary": "2-3 sentences plain language summary of hospital stay/diagnosis",
   "hospitalName": "Hospital or clinic name extracted from header/letterhead",
-  "hospitalPhone": "Hospital, clinic, or doctor emergency contact phone number printed on the document/prescription (e.g. +91 9876543210, 080-23456789, or 555-0198). Empty string if none found",
+  "hospitalPhone": "Hospital, clinic, or doctor emergency contact phone number",
   "keyDiagnoses": ["diagnosis 1", "diagnosis 2"],
   "medications": [
     {
@@ -506,40 +517,42 @@ Provide a structured response in clean JSON format with these exact keys:
 }
 Ensure you return ONLY valid JSON without markdown fences.`;
 
-    const rawResponse = await callGemini(userPrompt, systemPrompt, fileData, passedApiKey);
-    let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-      if (!parsed.hospitalPhone) {
-        const textToSearch = `${parsed.hospitalName || ''} ${parsed.summary || ''} ${textContent || ''}`;
-        const phoneMatch = textToSearch.match(/(?:tel|phone|ph|mob|emergency|contact|call)[\s.:#-]*([+]?[\d\s().-]{7,18}\d)/i) ||
-                           textToSearch.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/) ||
-                           textToSearch.match(/\b[6-9]\d{9}\b/);
-        if (phoneMatch) {
-          parsed.hospitalPhone = (phoneMatch[1] || phoneMatch[0]).trim();
+        const rawResponse = await callGemini(userPrompt, systemPrompt, fileData, effectiveApiKey);
+        let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const jsonCandidate = JSON.parse(cleaned);
+
+        if (jsonCandidate && jsonCandidate.medications && jsonCandidate.medications.length > 0 && jsonCandidate.hospitalName !== 'St. Elizabeth Medical Clinic') {
+          parsed = jsonCandidate;
         }
+      } catch (geminiErr) {
+        console.warn('[Document Analysis] Gemini call failed, falling back to Native OCR:', geminiErr.message);
       }
-      if (!parsed.medications && parsed.medicationsList) {
-        parsed.medications = parsed.medicationsList.map(m => ({
-          name: m.drugName || m.name,
-          dosage: m.dosage || '',
-          schedule: m.frequency || m.schedule || '',
-          instructions: m.instructions || '',
-          purpose: m.caution || ''
-        }));
-      }
-      if (!parsed.medicationsList && parsed.medications) {
-        parsed.medicationsList = parsed.medications.map(m => ({
-          drugName: m.name,
-          dosage: m.dosage || '',
-          frequency: m.schedule || '',
-          instructions: m.instructions || '',
-          caution: m.criticalWarning || m.purpose || ''
-        }));
-      }
-    } catch {
-      parsed = { rawText: rawResponse };
+    }
+
+    // 2. High-Precision Native Windows OCR if Gemini did not run or had no medications
+    if (!parsed || !parsed.medications || parsed.medications.length === 0) {
+      console.log('[Document Analysis] Running native Windows OCR on uploaded document...');
+      parsed = await processDocumentImage(req.file ? req.file.buffer : null, textContent);
+    }
+
+    // Harmonize keys for frontend compatibility
+    if (!parsed.medications && parsed.medicationsList) {
+      parsed.medications = parsed.medicationsList.map(m => ({
+        name: m.drugName || m.name,
+        dosage: m.dosage || '',
+        schedule: m.frequency || m.schedule || '',
+        instructions: m.instructions || '',
+        purpose: m.caution || ''
+      }));
+    }
+    if (!parsed.medicationsList && parsed.medications) {
+      parsed.medicationsList = parsed.medications.map(m => ({
+        drugName: m.name,
+        dosage: m.dosage || '',
+        frequency: m.schedule || '',
+        instructions: m.instructions || '',
+        caution: m.criticalWarning || m.purpose || ''
+      }));
     }
 
     res.json({ success: true, data: parsed });
