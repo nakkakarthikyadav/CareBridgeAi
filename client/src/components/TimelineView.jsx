@@ -446,7 +446,7 @@ export default function TimelineView({ setToastMessage }) {
 
   return (
     <div className="recovery-journey-wrapper">
-      <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.85fr', gap: '2.5rem', alignItems: 'flex-start' }}>
+      <div className="recovery-journey-grid">
         
         {/* Left Column: Daily Recovery Checklist */}
         <div className="checklist-column">

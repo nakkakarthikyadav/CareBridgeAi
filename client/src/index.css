@@ -1820,9 +1820,18 @@ body {
   }
 
   .dashboard-main-content {
-    padding: 1rem 0.875rem 3rem 0.875rem;
-    max-width: 100vw;
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    padding: 1rem 0.875rem 3rem 0.875rem !important;
     overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .recovery-journey-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
   }
 
   .pathway-horizontal-container {
@@ -1837,4 +1846,11 @@ body {
     min-width: 155px !important;
     flex-shrink: 0 !important;
   }
+}
+
+.recovery-journey-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.85fr;
+  gap: 2.5rem;
+  align-items: flex-start;
 }
