@@ -646,9 +646,9 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 type="button"
                 onClick={onNavigateToPrescriptions}
                 style={{
-                  background: '#000000',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
                   color: '#ffffff',
-                  border: '2px solid #000000',
+                  border: 'none',
                   borderRadius: '8px',
                   padding: '10px 20px',
                   fontSize: '0.85rem',
@@ -656,7 +656,8 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)'
                 }}
               >
                 <span>View Prescriptions (Step 1)</span>
@@ -669,12 +670,12 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                   onClick={() => onNavigateToStep('reminders')}
                   style={{
                     background: '#ffffff',
-                    color: '#000000',
-                    border: '2px solid #000000',
+                    color: '#334155',
+                    border: '1.5px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '10px 18px',
                     fontSize: '0.85rem',
-                    fontWeight: 800,
+                    fontWeight: 700,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -697,21 +698,22 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
           }}>
             <div style={{
               background: '#ffffff',
-              border: '1.5px solid #000000',
+              border: '1px solid #e2e8f0',
               borderRadius: '12px',
               padding: '1.25rem',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Option 1 • Medical Records
                 </span>
-                <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 900, color: '#000000' }}>
+                <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
                   Prescriptions &amp; Medications
                 </h5>
-                <p style={{ margin: 0, fontSize: '0.825rem', color: '#111827', lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
                   {result.medications?.length || 0} active medications parsed with dosages and schedule instructions.
                 </p>
               </div>
@@ -720,13 +722,13 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 onClick={onNavigateToPrescriptions}
                 style={{
                   marginTop: '1rem',
-                  background: '#000000',
+                  background: '#4f46e5',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '6px',
                   padding: '8px 14px',
                   fontSize: '0.8rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
@@ -736,21 +738,22 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
 
             <div style={{
               background: '#ffffff',
-              border: '1.5px solid #000000',
+              border: '1px solid #e2e8f0',
               borderRadius: '12px',
               padding: '1.25rem',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Option 2 • Daily Alarms
                 </span>
-                <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 900, color: '#000000' }}>
+                <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
                   Dose Timetable &amp; Care Checklist
                 </h5>
-                <p style={{ margin: 0, fontSize: '0.825rem', color: '#111827', lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
                   Daily medication times and home care instructions have been synchronized into your daily schedule.
                 </p>
               </div>
@@ -759,13 +762,13 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 onClick={() => onNavigateToStep ? onNavigateToStep('reminders') : onNavigateToPrescriptions()}
                 style={{
                   marginTop: '1rem',
-                  background: '#ffffff',
-                  color: '#000000',
-                  border: '1.5px solid #000000',
+                  background: '#eef2ff',
+                  color: '#4f46e5',
+                  border: '1px solid #c7d2fe',
                   borderRadius: '6px',
                   padding: '8px 14px',
                   fontSize: '0.8rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
@@ -775,21 +778,22 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
 
             <div style={{
               background: '#ffffff',
-              border: '1.5px solid #000000',
+              border: '1px solid #e2e8f0',
               borderRadius: '12px',
               padding: '1.25rem',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Option 3 • Clinic Checkups
                 </span>
-                <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 900, color: '#000000' }}>
+                <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
                   Follow-Up Visits
                 </h5>
-                <p style={{ margin: 0, fontSize: '0.825rem', color: '#111827', lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
                   {result.followUpAppointment ? `Appointment date: ${result.followUpAppointment}.` : 'Postoperative doctor visits and calendar reminders.'}
                 </p>
               </div>
@@ -798,13 +802,13 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 onClick={() => onNavigateToStep ? onNavigateToStep('followup') : onNavigateToPrescriptions()}
                 style={{
                   marginTop: '1rem',
-                  background: '#ffffff',
-                  color: '#000000',
-                  border: '1.5px solid #000000',
+                  background: '#f0fdf4',
+                  color: '#16a34a',
+                  border: '1px solid #bbf7d0',
                   borderRadius: '6px',
                   padding: '8px 14px',
                   fontSize: '0.8rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
@@ -813,18 +817,19 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             </div>
           </div>
 
-          {/* Plain-Language Clinical Summary Box (Strict Black and White only) */}
+          {/* Plain-Language Clinical Summary Box */}
           <div style={{
             background: '#ffffff',
-            border: '1.5px solid #000000',
+            border: '1px solid #e2e8f0',
             borderRadius: '14px',
             padding: '1.5rem',
-            marginBottom: '1.5rem'
+            marginBottom: '1.5rem',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
           }}>
-            <h4 style={{ color: '#000000', fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+            <h4 style={{ color: 'var(--navy)', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>
               Plain-Language Clinical Summary
             </h4>
-            <p style={{ fontSize: '0.925rem', color: '#000000', lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: '0.925rem', color: '#334155', lineHeight: 1.6, margin: 0 }}>
               {result.summary || result.rawText}
             </p>
 
@@ -834,13 +839,13 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                   <span
                     key={i}
                     style={{
-                      background: '#ffffff',
-                      color: '#000000',
+                      background: '#eef2ff',
+                      color: '#4f46e5',
                       padding: '4px 12px',
                       borderRadius: '9999px',
                       fontSize: '0.8rem',
-                      fontWeight: 800,
-                      border: '1.5px solid #000000'
+                      fontWeight: 700,
+                      border: '1px solid #c7d2fe'
                     }}
                   >
                     ✓ {diag}
@@ -850,11 +855,11 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             )}
           </div>
 
-          {/* Extracted Prescribed Medications Cards (Strict Black and White only) */}
+          {/* Extracted Prescribed Medications Cards */}
           {result.medications && result.medications.length > 0 && (
             <div style={{ marginBottom: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h4 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#000000', margin: 0 }}>
+                <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--navy)', margin: 0 }}>
                   Extracted Medications ({result.medications.length})
                 </h4>
               </div>
@@ -864,52 +869,53 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                   <div
                     key={idx}
                     style={{
-                      border: '1.5px solid #000000',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '12px',
                       padding: '1.25rem',
-                      background: '#ffffff'
+                      background: '#ffffff',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '0.5rem' }}>
-                      <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#000000' }}>
+                      <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--navy)' }}>
                         {med.name}
                       </div>
                       <span style={{
-                        background: '#ffffff',
-                        color: '#000000',
+                        background: '#eef2ff',
+                        color: '#4f46e5',
                         fontSize: '0.75rem',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         padding: '3px 8px',
                         borderRadius: '9999px',
-                        border: '1px solid #000000',
+                        border: '1px solid #c7d2fe',
                         whiteSpace: 'nowrap'
                       }}>
                         {med.schedule}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '0.85rem', color: '#000000', marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#334155', marginBottom: '0.5rem' }}>
                       <strong>Purpose:</strong> {med.purpose}
                     </div>
 
                     {med.instructions && (
-                      <div style={{ fontSize: '0.825rem', color: '#111827', marginBottom: '0.5rem' }}>
+                      <div style={{ fontSize: '0.825rem', color: '#64748b', marginBottom: '0.5rem' }}>
                         <strong>Instructions:</strong> {med.instructions}
                       </div>
                     )}
 
                     {med.criticalWarning && (
                       <div style={{
-                        background: '#ffffff',
-                        border: '2px solid #000000',
-                        color: '#000000',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        color: '#b91c1c',
                         borderRadius: '8px',
                         padding: '8px 10px',
                         fontSize: '0.8rem',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         marginTop: '0.5rem'
                       }}>
-                        [CRITICAL WARNING] {med.criticalWarning}
+                        ⚠️ Critical: {med.criticalWarning}
                       </div>
                     )}
                   </div>

@@ -516,20 +516,21 @@ export default function DashboardPortal({
                     width: '100%',
                     padding: '9px 12px',
                     borderRadius: '12px',
-                    border: isActive ? '1.5px solid #000000' : '1px solid transparent',
-                    background: isActive ? '#000000' : 'transparent',
-                    color: isActive ? '#ffffff' : '#000000',
+                    border: 'none',
+                    background: isActive ? '#eef2ff' : 'transparent',
+                    color: isActive ? '#4f46e5' : '#334155',
                     fontWeight: isActive ? 800 : 600,
                     cursor: 'pointer',
                     textAlign: 'left',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.15s ease',
+                    boxShadow: isActive ? 'inset 3px 0 0 #4f46e5' : 'none'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '1.15rem' }}>{item.icon}</span>
                     <div>
-                      <div style={{ fontSize: '0.84rem', lineHeight: 1.2, color: isActive ? '#ffffff' : '#000000' }}>{item.label}</div>
-                      <div style={{ fontSize: '0.69rem', color: isActive ? '#e2e8f0' : '#64748b', fontWeight: 500 }}>
+                      <div style={{ fontSize: '0.84rem', lineHeight: 1.2 }}>{item.label}</div>
+                      <div style={{ fontSize: '0.69rem', color: isActive ? '#6366f1' : '#94a3b8', fontWeight: 500 }}>
                         {item.sub}
                       </div>
                     </div>
@@ -537,8 +538,8 @@ export default function DashboardPortal({
 
                   {item.badge && (
                     <span style={{
-                      background: isActive ? '#ffffff' : '#f1f5f9',
-                      color: '#000000',
+                      background: isActive ? '#c7d2fe' : '#f1f5f9',
+                      color: isActive ? '#3730a3' : '#475569',
                       fontSize: '0.675rem',
                       fontWeight: 800,
                       padding: '2px 6px',
@@ -678,9 +679,9 @@ export default function DashboardPortal({
             }}>
               <div>
                 <span style={{
-                  background: '#ffffff',
-                  color: '#000000',
-                  border: '1.5px solid #000000',
+                  background: '#eef2ff',
+                  color: '#4f46e5',
+                  border: '1px solid #c7d2fe',
                   padding: '4px 14px',
                   borderRadius: '9999px',
                   fontSize: '0.75rem',
@@ -690,10 +691,10 @@ export default function DashboardPortal({
                 }}>
                   POST-DISCHARGE CLINICAL SAFETY PROTOCOL • ACTIVE MONITORING
                 </span>
-                <h2 style={{ fontSize: '1.75rem', fontWeight: 900, margin: '10px 0 6px 0', color: '#000000' }}>
-                  Welcome to CareBridge AI, <span>{userProfile?.name || 'Patient'}</span>!
+                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '10px 0 6px 0', color: '#0f172a' }}>
+                  Welcome to CareBridge AI, <span style={{ color: '#4f46e5' }}>{userProfile?.name || 'Patient'}</span>!
                 </h2>
-                <p style={{ margin: 0, fontSize: '0.95rem', color: '#111827', maxWidth: '620px', lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', maxWidth: '620px', lineHeight: 1.6 }}>
                   CareBridge AI bridges the vulnerable transition from hospital to home. We decode doctor prescriptions, verify dangerous drug interactions, and schedule automated alarms so you never miss a dose.
                 </p>
               </div>
@@ -706,14 +707,15 @@ export default function DashboardPortal({
                     setActiveStep('prescriptions');
                   }}
                   style={{
-                    background: '#000000',
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
                     color: '#ffffff',
-                    border: '2px solid #000000',
+                    border: 'none',
                     borderRadius: '9999px',
                     padding: '11px 22px',
                     fontSize: '0.85rem',
                     fontWeight: 800,
                     cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(79, 70, 229, 0.28)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -729,8 +731,8 @@ export default function DashboardPortal({
                   onClick={() => setActiveStep('reminders')}
                   style={{
                     background: '#ffffff',
-                    color: '#000000',
-                    border: '2px solid #000000',
+                    color: '#334155',
+                    border: '1.5px solid #cbd5e1',
                     borderRadius: '9999px',
                     padding: '11px 20px',
                     fontSize: '0.85rem',
@@ -759,7 +761,7 @@ export default function DashboardPortal({
                 onClick={() => setActiveStep('prescriptions')}
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #000000',
+                  border: '1px solid #e2e8f0',
                   borderRadius: 'var(--radius-xl)',
                   padding: '1.5rem',
                   boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
@@ -768,7 +770,7 @@ export default function DashboardPortal({
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#000000' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
                     Active Medications
                   </span>
                   <span style={{ fontSize: '1.2rem' }}>💊</span>
@@ -777,13 +779,13 @@ export default function DashboardPortal({
                   const allMeds = prescriptions.flatMap(p => p.medications || []);
                   return (
                     <>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#000000' }}>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--navy)' }}>
                         {allMeds.length > 0 ? `${allMeds.length} On Schedule` : '0 Active'}
                       </div>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#111827', fontWeight: 600 }}>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: allMeds.length > 0 ? '#4338ca' : '#64748b', fontWeight: 600 }}>
                         {allMeds.length > 0 ? allMeds.slice(0, 3).map(m => m.name).join(', ') : 'No active prescriptions on file'}
                       </p>
-                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#000000', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: allMeds.length > 0 ? '#16a34a' : '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span>{allMeds.length > 0 ? '✓' : 'ℹ️'}</span> {allMeds.length > 0 ? 'Verified via Clinical OCR' : 'Upload prescription to track doses'}
                       </div>
                     </>
@@ -796,7 +798,7 @@ export default function DashboardPortal({
                 onClick={() => setActiveStep('reminders')}
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #000000',
+                  border: '1px solid #e2e8f0',
                   borderRadius: 'var(--radius-xl)',
                   padding: '1.5rem',
                   boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
@@ -805,7 +807,7 @@ export default function DashboardPortal({
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#000000' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
                     Next Scheduled Dose
                   </span>
                   <span style={{ fontSize: '1.2rem' }}>⏰</span>
@@ -815,13 +817,13 @@ export default function DashboardPortal({
                   const firstMed = allMeds[0];
                   return (
                     <>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#000000' }}>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--navy)' }}>
                         {firstMed ? (firstMed.schedule || 'Scheduled') : 'None Pending'}
                       </div>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#111827' }}>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
                         {firstMed ? `${firstMed.name} ${firstMed.dosage ? `(${firstMed.dosage})` : ''}` : 'No upcoming dose alarms'}
                       </p>
-                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#000000', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#4338ca', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span>🔔</span> Web Audio chime alarms enabled
                       </div>
                     </>
@@ -834,7 +836,7 @@ export default function DashboardPortal({
                 onClick={() => setActiveStep('followup')}
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #000000',
+                  border: '1px solid #e2e8f0',
                   borderRadius: 'var(--radius-xl)',
                   padding: '1.5rem',
                   boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
@@ -843,7 +845,7 @@ export default function DashboardPortal({
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#000000' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
                     Post-Op Checkup
                   </span>
                   <span style={{ fontSize: '1.2rem' }}>📅</span>
@@ -852,13 +854,13 @@ export default function DashboardPortal({
                   const firstApt = appointments && appointments.length > 0 ? appointments[0] : null;
                   return (
                     <>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#000000' }}>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--navy)' }}>
                         {firstApt ? `${firstApt.date} (in ${firstApt.daysRemaining || 0}d)` : 'None Scheduled'}
                       </div>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#111827' }}>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
                         {firstApt ? `${firstApt.doctor} • ${firstApt.specialty || 'Follow-up'}` : 'No upcoming doctor visits'}
                       </p>
-                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#000000', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ marginTop: '10px', fontSize: '0.72rem', color: '#0284c7', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span>📍</span> {firstApt?.clinic || 'Add checkup in Schedule Follow-up'}
                       </div>
                     </>
@@ -877,9 +879,9 @@ export default function DashboardPortal({
             }}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <span style={{
-                  background: '#ffffff',
-                  color: '#000000',
-                  border: '1.5px solid #000000',
+                  background: '#eef2ff',
+                  color: '#4338ca',
+                  border: '1px solid #c7d2fe',
                   fontSize: '0.75rem',
                   fontWeight: 800,
                   padding: '3px 10px',
@@ -888,10 +890,10 @@ export default function DashboardPortal({
                 }}>
                   CAREBRIDGE AI PLATFORM SERVICES
                 </span>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#000000', margin: '8px 0 4px 0' }}>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--navy)', margin: '8px 0 4px 0' }}>
                   Everything you need for safe recovery at home
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: '#111827', margin: 0 }}>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
                   Select any tool below or use the sidebar navigation to manage your recovery journey.
                 </p>
               </div>
@@ -908,10 +910,10 @@ export default function DashboardPortal({
                     setActiveStep('prescriptions');
                   }}
                   style={{
-                    border: '1.5px solid #000000',
+                    border: '1px solid #e2e8f0',
                     borderRadius: 'var(--radius-lg)',
                     padding: '1.25rem',
-                    background: '#ffffff',
+                    background: '#f8fafc',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
@@ -921,14 +923,14 @@ export default function DashboardPortal({
                 >
                   <div>
                     <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>💊</div>
-                    <strong style={{ fontSize: '1rem', color: '#000000', display: 'block', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '1rem', color: 'var(--navy)', display: 'block', marginBottom: '4px' }}>
                       Step 1: Prescriptions &amp; Meds
                     </strong>
-                    <p style={{ fontSize: '0.82rem', color: '#111827', lineHeight: 1.4, margin: 0 }}>
+                    <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.4, margin: 0 }}>
                       Upload prescription photos or hospital discharge summaries. Our clinical OCR translates doctor handwriting and extracts verified medications.
                     </p>
                   </div>
-                  <div style={{ marginTop: '1rem', color: '#000000', fontSize: '0.82rem', fontWeight: 900 }}>
+                  <div style={{ marginTop: '1rem', color: '#4f46e5', fontSize: '0.82rem', fontWeight: 800 }}>
                     {prescriptions.length > 0 ? `View ${prescriptions.length} Prescriptions →` : 'Upload Prescription Scan →'}
                   </div>
                 </div>
@@ -937,10 +939,10 @@ export default function DashboardPortal({
                 <div 
                   onClick={() => setActiveStep('confusion')}
                   style={{
-                    border: '1.5px solid #000000',
+                    border: '1px solid #e2e8f0',
                     borderRadius: 'var(--radius-lg)',
                     padding: '1.25rem',
-                    background: '#ffffff',
+                    background: '#f8fafc',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
@@ -950,14 +952,14 @@ export default function DashboardPortal({
                 >
                   <div>
                     <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>🛡️</div>
-                    <strong style={{ fontSize: '1rem', color: '#000000', display: 'block', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '1rem', color: 'var(--navy)', display: 'block', marginBottom: '4px' }}>
                       Confusion Guard (LASA Safety)
                     </strong>
-                    <p style={{ fontSize: '0.82rem', color: '#111827', lineHeight: 1.4, margin: 0 }}>
+                    <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.4, margin: 0 }}>
                       Screen medications for dangerous Look-Alike / Sound-Alike errors (e.g. Metoprolol vs Hydralazine) and detect adverse drug-drug conflicts.
                     </p>
                   </div>
-                  <div style={{ marginTop: '1rem', color: '#000000', fontSize: '0.82rem', fontWeight: 900 }}>
+                  <div style={{ marginTop: '1rem', color: '#4f46e5', fontSize: '0.82rem', fontWeight: 800 }}>
                     Check Drug Safety &rarr;
                   </div>
                 </div>
@@ -966,10 +968,10 @@ export default function DashboardPortal({
                 <div 
                   onClick={() => setActiveStep('diet')}
                   style={{
-                    border: '1.5px solid #000000',
+                    border: '1px solid #e2e8f0',
                     borderRadius: 'var(--radius-lg)',
                     padding: '1.25rem',
-                    background: '#ffffff',
+                    background: '#f8fafc',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
@@ -979,14 +981,14 @@ export default function DashboardPortal({
                 >
                   <div>
                     <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>🥗</div>
-                    <strong style={{ fontSize: '1rem', color: '#000000', display: 'block', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '1rem', color: 'var(--navy)', display: 'block', marginBottom: '4px' }}>
                       Clinical Recovery Diet
                     </strong>
-                    <p style={{ fontSize: '0.82rem', color: '#111827', lineHeight: 1.4, margin: 0 }}>
+                    <p style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.4, margin: 0 }}>
                       Personalized dietary plans tailored to your specific surgery or cardiac stent to support tissue repair and prevent food-drug interactions.
                     </p>
                   </div>
-                  <div style={{ marginTop: '1rem', color: '#000000', fontSize: '0.82rem', fontWeight: 900 }}>
+                  <div style={{ marginTop: '1rem', color: '#4f46e5', fontSize: '0.82rem', fontWeight: 800 }}>
                     Generate Diet Plan &rarr;
                   </div>
                 </div>
@@ -1003,10 +1005,10 @@ export default function DashboardPortal({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#000000', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--navy)', margin: 0 }}>
                     💊 Latest Prescriptions On File ({prescriptions.length})
                   </h3>
-                  <p style={{ fontSize: '0.85rem', color: '#111827', margin: '4px 0 0 0' }}>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 0 0' }}>
                     Your active physician prescriptions and medication dosages parsed by clinical OCR.
                   </p>
                 </div>
@@ -1016,13 +1018,13 @@ export default function DashboardPortal({
                     type="button"
                     onClick={() => setActiveStep('prescriptions')}
                     style={{
-                      background: '#ffffff',
-                      color: '#000000',
-                      border: '1.5px solid #000000',
+                      background: '#eef2ff',
+                      color: '#4f46e5',
+                      border: '1px solid #c7d2fe',
                       borderRadius: 'var(--radius-md)',
                       padding: '8px 16px',
                       fontSize: '0.8rem',
-                      fontWeight: 800,
+                      fontWeight: 700,
                       cursor: 'pointer'
                     }}
                   >
@@ -1036,13 +1038,13 @@ export default function DashboardPortal({
                       setActiveStep('prescriptions');
                     }}
                     style={{
-                      background: '#000000',
+                      background: '#4f46e5',
                       color: '#ffffff',
-                      border: '1.5px solid #000000',
+                      border: 'none',
                       borderRadius: 'var(--radius-md)',
                       padding: '8px 16px',
                       fontSize: '0.8rem',
-                      fontWeight: 800,
+                      fontWeight: 700,
                       cursor: 'pointer'
                     }}
                   >
@@ -1054,20 +1056,20 @@ export default function DashboardPortal({
               {/* Showcase the top prescription or friendly empty state */}
               {prescriptions[0] ? (
                 <div style={{
-                  border: '1.5px solid #000000',
+                  border: '1px solid #e2e8f0',
                   borderRadius: 'var(--radius-lg)',
                   padding: '1.5rem',
-                  background: '#ffffff'
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '1rem' }}>
                     <div>
-                      <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#000000', background: '#ffffff', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #000000' }}>
+                      <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#4f46e5', background: '#eef2ff', padding: '3px 10px', borderRadius: '9999px', border: '1px solid #c7d2fe' }}>
                         ✓ {prescriptions[0].status} • Issued {prescriptions[0].date}
                       </span>
-                      <h4 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#000000', margin: '6px 0 2px 0' }}>
+                      <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
                         {prescriptions[0].title}
                       </h4>
-                      <div style={{ fontSize: '0.85rem', color: '#111827' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
                         Prescribed by <strong>{prescriptions[0].doctor}</strong> • {prescriptions[0].clinic}
                       </div>
                     </div>
@@ -1075,7 +1077,7 @@ export default function DashboardPortal({
                     <button
                       type="button"
                       onClick={() => handlePrintPrescription(prescriptions[0])}
-                      style={{ background: '#ffffff', border: '1px solid #000000', color: '#000000', borderRadius: 'var(--radius-sm)', padding: '6px 12px', fontSize: '0.775rem', fontWeight: 800, cursor: 'pointer' }}
+                      style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', borderRadius: 'var(--radius-sm)', padding: '6px 12px', fontSize: '0.775rem', fontWeight: 700, cursor: 'pointer' }}
                     >
                       📄 Download Summary (.txt)
                     </button>
@@ -1086,22 +1088,23 @@ export default function DashboardPortal({
                     {(prescriptions[0].medications || []).map((m, idx) => (
                       <div key={idx} style={{
                         background: '#ffffff',
-                        border: '1.5px solid #000000',
+                        border: '1px solid #e2e8f0',
+                        borderLeft: m.critical ? '4px solid #ef4444' : '4px solid #4f46e5',
                         borderRadius: 'var(--radius-sm)',
                         padding: '10px 12px'
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ color: '#000000', fontSize: '0.9rem' }}>{m.name}</strong>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#000000', background: '#ffffff', border: '1px solid #000000', padding: '2px 6px', borderRadius: '4px' }}>
+                          <strong style={{ color: 'var(--navy)', fontSize: '0.9rem' }}>{m.name}</strong>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4f46e5', background: '#eef2ff', padding: '2px 6px', borderRadius: '4px' }}>
                             {m.dosage}
                           </span>
                         </div>
-                        <div style={{ fontSize: '0.775rem', color: '#111827', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.775rem', color: '#64748b', marginTop: '2px' }}>
                           {m.schedule}
                         </div>
                         {m.critical && (
-                          <span style={{ fontSize: '0.7rem', color: '#000000', fontWeight: 800, display: 'block', marginTop: '4px' }}>
-                            [CRITICAL] Do NOT miss doses
+                          <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 700, display: 'block', marginTop: '4px' }}>
+                            ⚠️ Do NOT miss doses
                           </span>
                         )}
                       </div>

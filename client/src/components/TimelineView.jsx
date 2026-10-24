@@ -180,7 +180,7 @@ export default function TimelineView({ setToastMessage }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '1.6rem' }}>📋</span>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#000000', margin: 0 }}>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--navy)', margin: 0 }}>
                 Daily Recovery Checklist
               </h3>
             </div>
@@ -189,20 +189,20 @@ export default function TimelineView({ setToastMessage }) {
               type="button"
               onClick={() => setShowAddForm(!showAddForm)}
               style={{
-                background: '#000000',
-                color: '#ffffff',
-                border: '1px solid #000000',
+                background: '#eef2ff',
+                color: '#4f46e5',
+                border: '1px solid #c7d2fe',
                 borderRadius: '8px',
                 padding: '6px 14px',
                 fontSize: '0.8rem',
-                fontWeight: 800,
+                fontWeight: 700,
                 cursor: 'pointer'
               }}
             >
               {showAddForm ? '✕ Close Form' : '➕ Add Item'}
             </button>
           </div>
-          <p style={{ fontSize: '0.875rem', color: '#000000', marginBottom: '1.5rem' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
             Check off items as you complete them throughout your day.
           </p>
 
@@ -261,14 +261,14 @@ export default function TimelineView({ setToastMessage }) {
           <div style={{ marginBottom: '1.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.85rem' }}>
               <span style={{ fontSize: '1.25rem' }}>💊</span>
-              <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#000000' }}>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)' }}>
                 Confirmed Medications
               </h4>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {meds.length === 0 ? (
-                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #000000', background: '#ffffff', color: '#000000', fontSize: '0.85rem', textAlign: 'center' }}>
+                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #cbd5e1', background: '#f8fafc', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
                   ⚪ No medications in checklist yet. Use "+ Add Item" or upload a prescription.
                 </div>
               ) : (
@@ -277,8 +277,8 @@ export default function TimelineView({ setToastMessage }) {
                     key={item.id}
                     onClick={() => toggleItem(item.id, 'meds')}
                     style={{
-                      background: item.done ? '#f4f4f5' : '#ffffff',
-                      border: `1.5px solid #000000`,
+                      background: item.done ? '#f8fafc' : '#ffffff',
+                      border: `1px solid ${item.done ? '#bbf7d0' : '#e2e8f0'}`,
                       borderRadius: 'var(--radius-md)',
                       padding: '10px 14px',
                       display: 'flex',
@@ -293,12 +293,12 @@ export default function TimelineView({ setToastMessage }) {
                         type="checkbox" 
                         checked={item.done} 
                         onChange={() => {}} 
-                        style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#000000' }}
+                        style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#4f46e5' }}
                       />
                       <span style={{ 
                         fontSize: '0.9rem', 
-                        fontWeight: 700, 
-                        color: item.done ? '#71717a' : '#000000',
+                        fontWeight: 600, 
+                        color: item.done ? '#15803d' : 'var(--navy)',
                         textDecoration: item.done ? 'line-through' : 'none'
                       }}>
                         {item.text}
@@ -313,8 +313,8 @@ export default function TimelineView({ setToastMessage }) {
                         handleSoundChime(item.text.split('—')[0].trim());
                       }}
                       style={{
-                        background: '#ffffff',
-                        border: '1px solid #000000',
+                        background: 'none',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '50%',
                         width: '28px',
                         height: '28px',
@@ -335,13 +335,13 @@ export default function TimelineView({ setToastMessage }) {
 
           {/* Section 2: Discharge Advice */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#000000', marginBottom: '0.85rem' }}>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)', marginBottom: '0.85rem' }}>
               🩺 Discharge Advice
             </h4>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {advice.length === 0 ? (
-                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #000000', background: '#ffffff', color: '#000000', fontSize: '0.85rem', textAlign: 'center' }}>
+                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #cbd5e1', background: '#f8fafc', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
                   ⚪ No discharge advice in checklist yet.
                 </div>
               ) : (
@@ -350,8 +350,8 @@ export default function TimelineView({ setToastMessage }) {
                     key={item.id}
                     onClick={() => toggleItem(item.id, 'advice')}
                     style={{
-                      background: item.done ? '#f4f4f5' : '#ffffff',
-                      border: `1.5px solid #000000`,
+                      background: item.done ? '#f8fafc' : '#ffffff',
+                      border: `1px solid ${item.done ? '#bbf7d0' : '#e2e8f0'}`,
                       borderRadius: 'var(--radius-md)',
                       padding: '10px 14px',
                       display: 'flex',
@@ -365,12 +365,12 @@ export default function TimelineView({ setToastMessage }) {
                       type="checkbox" 
                       checked={item.done} 
                       onChange={() => {}} 
-                      style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#000000' }}
+                      style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#4f46e5' }}
                     />
                     <span style={{ 
                       fontSize: '0.9rem', 
-                      fontWeight: 600, 
-                      color: item.done ? '#71717a' : '#000000',
+                      fontWeight: 500, 
+                      color: item.done ? '#15803d' : '#334155',
                       textDecoration: item.done ? 'line-through' : 'none'
                     }}>
                       {item.text}
@@ -383,13 +383,13 @@ export default function TimelineView({ setToastMessage }) {
 
           {/* Section 3: Diet & Lifestyle */}
           <div>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#000000', marginBottom: '0.85rem' }}>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--navy)', marginBottom: '0.85rem' }}>
               🥗 Diet &amp; Lifestyle Instructions
             </h4>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {diet.length === 0 ? (
-                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #000000', background: '#ffffff', color: '#000000', fontSize: '0.85rem', textAlign: 'center' }}>
+                <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px dashed #cbd5e1', background: '#f8fafc', color: '#64748b', fontSize: '0.85rem', textAlign: 'center' }}>
                   ⚪ No diet or lifestyle instructions recorded yet.
                 </div>
               ) : (
@@ -398,8 +398,8 @@ export default function TimelineView({ setToastMessage }) {
                     key={item.id}
                     onClick={() => toggleItem(item.id, 'diet')}
                     style={{
-                      background: item.done ? '#f4f4f5' : '#ffffff',
-                      border: `1.5px solid #000000`,
+                      background: item.done ? '#f8fafc' : '#ffffff',
+                      border: `1px solid ${item.done ? '#bbf7d0' : '#e2e8f0'}`,
                       borderRadius: 'var(--radius-md)',
                       padding: '10px 14px',
                       display: 'flex',
@@ -413,12 +413,12 @@ export default function TimelineView({ setToastMessage }) {
                       type="checkbox" 
                       checked={item.done} 
                       onChange={() => {}} 
-                      style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#000000' }}
+                      style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#4f46e5' }}
                     />
                     <span style={{ 
                       fontSize: '0.9rem', 
-                      fontWeight: 600, 
-                      color: item.done ? '#71717a' : '#000000',
+                      fontWeight: 500, 
+                      color: item.done ? '#15803d' : '#334155',
                       textDecoration: item.done ? 'line-through' : 'none'
                     }}>
                       {item.text}
@@ -463,7 +463,7 @@ export default function TimelineView({ setToastMessage }) {
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
                   Adherence Rate
                 </span>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#ffffff', marginTop: '2px' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: adherenceRate >= 80 ? '#4ade80' : '#fbbf24', marginTop: '2px' }}>
                   {adherenceRate}%
                 </div>
               </div>
@@ -472,14 +472,14 @@ export default function TimelineView({ setToastMessage }) {
 
           {/* Adherence Streak Badge */}
           <div style={{
-            background: '#ffffff',
-            color: '#000000',
+            background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+            color: '#4338ca',
             borderRadius: 'var(--radius-md)',
             padding: '12px 16px',
             fontWeight: 800,
             fontSize: '0.9rem',
             textAlign: 'center',
-            border: '1.5px solid #000000',
+            border: '1px solid #c7d2fe',
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
@@ -493,18 +493,18 @@ export default function TimelineView({ setToastMessage }) {
           {/* Recent Activity Log */}
           <div style={{
             background: '#ffffff',
-            border: '1.5px solid #000000',
+            border: '1px solid var(--border-light)',
             borderRadius: 'var(--radius-lg)',
             padding: '1.25rem',
             marginBottom: '1.5rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 900, fontSize: '0.95rem', color: '#000000', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.95rem', color: 'var(--navy)', marginBottom: '0.75rem' }}>
               <span>🕒</span>
               <span>Recent Activity Log</span>
             </div>
 
             {activityLogs.length === 0 ? (
-              <p style={{ fontSize: '0.85rem', color: '#000000', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 ⚪ No activity recorded yet today. Check off your first task on the left to start tracking!
               </p>
             ) : (
