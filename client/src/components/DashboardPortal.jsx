@@ -1196,32 +1196,19 @@ export default function DashboardPortal({
         {/* STEP 1: PRESCRIPTIONS & MEDICATIONS (Handled once) */}
         {(activeStep === 'prescriptions' || activeStep === 'upload' || activeStep === 'verify') && (
           <div>
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 'var(--radius-xl)',
-              padding: '2rem',
-              marginBottom: '2rem'
-            }}>
+            <div className="portal-step-card">
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <span style={{
-                    background: '#eef2ff',
-                    color: '#4f46e5',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    padding: '3px 10px',
-                    borderRadius: '9999px'
-                  }}>
+                  <span className="portal-step-badge">
                     Step 1 of 5
                   </span>
-                  <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
+                  <h2 className="portal-step-title">
                     {prescriptions.length === 0 || showAddAnotherRx
                       ? "1. Upload Prescription / Hospital Discharge Summary"
                       : "1. Prescriptions & Active Medications"}
                   </h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                  <p className="portal-step-subtitle">
                     {prescriptions.length === 0 || showAddAnotherRx
                       ? "Upload doctor's cursive prescription or hospital discharge summary once. All medications, dosages, and schedules will be automatically decoded."
                       : "Review your verified medications, check dosages, and proceed to daily dose timetable & alarms."}
@@ -1320,57 +1307,33 @@ export default function DashboardPortal({
                 </div>
               ) : (
                 <>
-                  {/* Filters row (Black and White) */}
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', borderBottom: '1.5px solid #000000', paddingBottom: '1rem' }}>
+                  {/* Filters row with purposeful clinical palette */}
+                  <div className="rx-filter-group">
                     <button
                       type="button"
                       onClick={() => setPrescriptionFilter('all')}
-                      style={{
-                        background: prescriptionFilter === 'all' ? '#000000' : '#ffffff',
-                        color: prescriptionFilter === 'all' ? '#ffffff' : '#000000',
-                        border: '1.5px solid #000000',
-                        borderRadius: '9999px',
-                        padding: '6px 14px',
-                        fontSize: '0.8rem',
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
+                      className={`rx-filter-btn rx-filter-btn-all ${prescriptionFilter === 'all' ? 'active' : ''}`}
                     >
-                      All Prescriptions ({prescriptions.length})
+                      <span>📋</span>
+                      <span>All Prescriptions ({prescriptions.length})</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setPrescriptionFilter('active')}
-                      style={{
-                        background: prescriptionFilter === 'active' ? '#000000' : '#ffffff',
-                        color: prescriptionFilter === 'active' ? '#ffffff' : '#000000',
-                        border: '1.5px solid #000000',
-                        borderRadius: '9999px',
-                        padding: '6px 14px',
-                        fontSize: '0.8rem',
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
+                      className={`rx-filter-btn rx-filter-btn-active ${prescriptionFilter === 'active' ? 'active' : ''}`}
                     >
-                      Active Courses ({prescriptions.filter(p => p.status === 'Active').length})
+                      <span>✓</span>
+                      <span>Active Courses ({prescriptions.filter(p => p.status === 'Active').length})</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setPrescriptionFilter('refills')}
-                      style={{
-                        background: prescriptionFilter === 'refills' ? '#000000' : '#ffffff',
-                        color: prescriptionFilter === 'refills' ? '#ffffff' : '#000000',
-                        border: '1.5px solid #000000',
-                        borderRadius: '9999px',
-                        padding: '6px 14px',
-                        fontSize: '0.8rem',
-                        fontWeight: 800,
-                        cursor: 'pointer'
-                      }}
+                      className={`rx-filter-btn rx-filter-btn-refills ${prescriptionFilter === 'refills' ? 'active' : ''}`}
                     >
-                      Refills Available
+                      <span>🔄</span>
+                      <span>Refills Available</span>
                     </button>
                   </div>
 
@@ -1379,61 +1342,78 @@ export default function DashboardPortal({
                     {filteredPrescriptions.map((rx) => (
                   <div
                     key={rx.id}
-                    style={{
-                      border: '2px solid #000000',
-                      borderRadius: 'var(--radius-lg)',
-                      padding: '1.75rem',
-                      background: '#ffffff',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)'
-                    }}
+                    className="clinical-rx-card"
                   >
                     {/* Prescription Top Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '1.25rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-light, #e2e8f0)', paddingBottom: '1rem' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{
-                            background: '#ffffff',
-                            color: '#000000',
+                            background: '#ecfdf5',
+                            color: '#059669',
                             fontSize: '0.75rem',
                             fontWeight: 800,
-                            padding: '3px 10px',
+                            padding: '3px 12px',
                             borderRadius: '9999px',
-                            border: '1.5px solid #000000'
+                            border: '1.5px solid #6ee7b7',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
                           }}>
                             ✓ {rx.status}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: '#111827' }}>
+                          <span style={{
+                            background: '#f8fafc',
+                            color: '#334155',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            padding: '3px 10px',
+                            borderRadius: '9999px',
+                            border: '1px solid #e2e8f0'
+                          }}>
                             📅 Prescribed: <strong>{rx.date}</strong>
                           </span>
                           <span style={{
-                            background: '#f1f5f9',
-                            color: '#000000',
+                            background: '#eef2ff',
+                            color: '#4f46e5',
                             fontSize: '0.725rem',
                             fontWeight: 800,
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #000000'
+                            padding: '3px 10px',
+                            borderRadius: '9999px',
+                            border: '1px solid #c7d2fe'
                           }}>
                             {rx.documentType}
                           </span>
                         </div>
 
-                        <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#000000', margin: '8px 0 4px 0' }}>
+                        <h3 className="clinical-rx-title">
                           {rx.title}
                         </h3>
 
-                        <div style={{ fontSize: '0.875rem', color: '#111827' }}>
-                          Prescribing Physician: <strong>{rx.doctor}</strong> • 📍 {rx.clinic}
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-main, #334155)' }}>
+                          Prescribing Physician: <strong style={{ color: 'var(--navy, #0f172a)' }}>{rx.doctor}</strong> • <span style={{ color: '#0d9488', fontWeight: 600 }}>📍 {rx.clinic}</span>
                         </div>
-                        <div style={{ fontSize: '0.825rem', color: '#111827', marginTop: '2px' }}>
-                          Diagnosis / Indication: <strong>{rx.diagnosis}</strong> • Refill: <strong>{rx.refill}</strong>
+                        <div style={{ fontSize: '0.825rem', color: 'var(--text-main, #334155)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span>Diagnosis:</span>
+                          <span style={{
+                            background: '#eff6ff',
+                            color: '#1d4ed8',
+                            border: '1px solid #bfdbfe',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            fontWeight: 700
+                          }}>
+                            {rx.diagnosis}
+                          </span>
+                          <span>•</span>
+                          <span>Refill: <strong>{rx.refill}</strong></span>
                         </div>
                         {Boolean(rx.hospitalPhone && String(rx.hospitalPhone).trim()) && (
                           <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <span style={{
-                              background: '#fef2f2',
-                              border: '1.5px solid #fecaca',
-                              color: '#991b1b',
+                              background: '#fff1f2',
+                              border: '1.5px solid #fecdd3',
+                              color: '#e11d48',
                               fontSize: '0.8rem',
                               fontWeight: 800,
                               padding: '3px 10px',
@@ -1473,15 +1453,15 @@ export default function DashboardPortal({
                       </div>
 
                       {/* Right top actions */}
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {rx.imagePreview && (
                           <button
                             type="button"
                             onClick={() => setPreviewModalRx(rx)}
                             style={{
-                              background: '#ffffff',
-                              border: '1.5px solid #000000',
-                              color: '#000000',
+                              background: '#f0fdf4',
+                              border: '1.5px solid #86efac',
+                              color: '#15803d',
                               borderRadius: 'var(--radius-sm)',
                               padding: '8px 14px',
                               fontSize: '0.8rem',
@@ -1489,7 +1469,8 @@ export default function DashboardPortal({
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '6px'
+                              gap: '6px',
+                              transition: 'all 0.2s ease'
                             }}
                           >
                             <span>🔍</span>
@@ -1501,9 +1482,9 @@ export default function DashboardPortal({
                           type="button"
                           onClick={() => handlePrintPrescription(rx)}
                           style={{
-                            background: '#ffffff',
-                            border: '1.5px solid #000000',
-                            color: '#000000',
+                            background: '#eff6ff',
+                            border: '1.5px solid #93c5fd',
+                            color: '#1d4ed8',
                             borderRadius: 'var(--radius-sm)',
                             padding: '8px 14px',
                             fontSize: '0.8rem',
@@ -1511,7 +1492,8 @@ export default function DashboardPortal({
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            gap: '6px',
+                            transition: 'all 0.2s ease'
                           }}
                         >
                           <span>📄</span>
@@ -1523,7 +1505,7 @@ export default function DashboardPortal({
                           onClick={() => handleDeletePrescription(rx.id)}
                           style={{
                             background: '#fff1f2',
-                            border: '1.5px solid #e11d48',
+                            border: '1.5px solid #fecdd3',
                             color: '#e11d48',
                             borderRadius: 'var(--radius-sm)',
                             padding: '8px 14px',
@@ -1532,7 +1514,8 @@ export default function DashboardPortal({
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            gap: '6px',
+                            transition: 'all 0.2s ease'
                           }}
                         >
                           <span>🗑️</span>
@@ -1543,60 +1526,48 @@ export default function DashboardPortal({
 
                     {/* Prescribed Medications Grid */}
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', color: '#000000', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                        Active Prescribed Medications ({rx.medications.length})
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', color: '#4f46e5', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>💊</span>
+                        <span>Active Prescribed Medications ({rx.medications.length})</span>
                       </div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
                         {rx.medications.map((med, idx) => (
                           <div
                             key={idx}
-                            style={{
-                              background: '#ffffff',
-                              border: '1.5px solid #000000',
-                              borderRadius: 'var(--radius-md)',
-                              padding: '12px 14px'
-                            }}
+                            className="clinical-med-card"
                           >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <strong style={{ fontSize: '0.95rem', color: '#000000' }}>{med.name}</strong>
-                              <span style={{
-                                background: '#f1f5f9',
-                                color: '#000000',
-                                fontSize: '0.75rem',
-                                fontWeight: 800,
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                border: '1px solid #000000'
-                              }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <strong className="clinical-med-name">{med.name}</strong>
+                              <span className="clinical-med-dosage">
                                 {med.dosage}
                               </span>
                             </div>
 
-                            <div style={{ fontSize: '0.8rem', color: '#000000', fontWeight: 800, marginBottom: '4px' }}>
+                            <div className="clinical-med-schedule">
                               ⏰ {med.schedule}
                             </div>
 
-                            <div style={{ fontSize: '0.8rem', color: '#111827', lineHeight: 1.4 }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-main, #334155)', lineHeight: 1.45, marginTop: '4px' }}>
                               {med.instructions}
                             </div>
 
                             {med.critical && (
                               <div style={{
-                                marginTop: '6px',
-                                background: '#ffffff',
-                                border: '2px solid #000000',
-                                color: '#000000',
+                                marginTop: '8px',
+                                background: '#fffbeb',
+                                border: '1.5px solid #fde68a',
+                                color: '#b45309',
                                 fontSize: '0.725rem',
-                                fontWeight: 900,
-                                padding: '4px 8px',
-                                borderRadius: '4px',
+                                fontWeight: 800,
+                                padding: '6px 10px',
+                                borderRadius: '6px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '4px'
+                                gap: '6px'
                               }}>
-                                <span>⚠️ CRITICAL:</span>
-                                <span>Do not miss doses. Risk of adverse complications.</span>
+                                <span>⚠️</span>
+                                <span><strong>SAFETY ALERT:</strong> Do not miss doses. Prescribed for essential cardiac/clinical stabilization.</span>
                               </div>
                             )}
                           </div>
@@ -1607,24 +1578,25 @@ export default function DashboardPortal({
                     {/* Physician Notes & Precautions */}
                     {rx.notes && (
                       <div style={{
-                        background: '#ffffff',
-                        border: '1.5px solid #000000',
+                        background: '#f8fafc',
+                        border: '1.5px solid #e2e8f0',
+                        borderLeft: '4px solid #f59e0b',
                         borderRadius: 'var(--radius-md)',
                         padding: '10px 14px',
                         fontSize: '0.825rem',
-                        color: '#000000',
+                        color: 'var(--text-main, #334155)',
                         marginBottom: '1rem',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px'
                       }}>
-                        <span>💡</span>
-                        <span><strong>Physician Directions:</strong> {rx.notes}</span>
+                        <span style={{ fontSize: '1.1rem' }}>💡</span>
+                        <span><strong style={{ color: '#b45309' }}>Physician Directions:</strong> {rx.notes}</span>
                       </div>
                     )}
 
                     {/* Action buttons on card footer */}
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingTop: '0.75rem', borderTop: '1px solid var(--border-light, #e2e8f0)' }}>
                       <button
                         type="button"
                         onClick={() => {
@@ -1633,17 +1605,18 @@ export default function DashboardPortal({
                           setActiveStep('recovery');
                         }}
                         style={{
-                          background: '#000000',
-                          border: '2px solid #000000',
+                          background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                          border: 'none',
                           color: '#ffffff',
                           borderRadius: 'var(--radius-sm)',
-                          padding: '8px 16px',
-                          fontSize: '0.8rem',
+                          padding: '9px 18px',
+                          fontSize: '0.82rem',
                           fontWeight: 800,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px'
+                          gap: '6px',
+                          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.28)'
                         }}
                       >
                         <span>⏰</span>
@@ -1654,12 +1627,12 @@ export default function DashboardPortal({
                         type="button"
                         onClick={() => setActiveStep('confusion')}
                         style={{
-                          background: '#ffffff',
-                          border: '1.5px solid #000000',
-                          color: '#000000',
+                          background: '#fffbeb',
+                          border: '1.5px solid #fde68a',
+                          color: '#b45309',
                           borderRadius: 'var(--radius-sm)',
-                          padding: '8px 16px',
-                          fontSize: '0.8rem',
+                          padding: '9px 16px',
+                          fontSize: '0.82rem',
                           fontWeight: 800,
                           cursor: 'pointer',
                           display: 'flex',
@@ -1745,29 +1718,16 @@ export default function DashboardPortal({
         {/* STEP 3: SCHEDULE FOLLOW-UP VISITS */}
         {activeStep === 'followup' && (
           <div>
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 'var(--radius-xl)',
-              padding: '2rem',
-              marginBottom: '2rem'
-            }}>
+            <div className="portal-step-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <span style={{
-                    background: '#eef2ff',
-                    color: '#4f46e5',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    padding: '3px 10px',
-                    borderRadius: '9999px'
-                  }}>
+                  <span className="portal-step-badge">
                     Step 2 of 5
                   </span>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
+                  <h2 className="portal-step-title">
                     2. Upcoming Medical Follow-Ups &amp; Clinic Checkups
                   </h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                  <p className="portal-step-subtitle">
                     Never miss a crucial postoperative appointment. Sync reminders with your phone's calendar (.ics).
                   </p>
                 </div>
@@ -2107,29 +2067,16 @@ export default function DashboardPortal({
         {/* STEP 4: TRACK MEDICATIONS */}
         {activeStep === 'recovery' && (
           <div>
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 'var(--radius-xl)',
-              padding: '2rem',
-              marginBottom: '2rem'
-            }}>
+            <div className="portal-step-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <span style={{
-                    background: '#eef2ff',
-                    color: '#4f46e5',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    padding: '3px 10px',
-                    borderRadius: '9999px'
-                  }}>
+                  <span className="portal-step-badge">
                     Step 3 of 5
                   </span>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
+                  <h2 className="portal-step-title">
                     3. Track Daily Prescribed Medications
                   </h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                  <p className="portal-step-subtitle">
                     Track confirmed medication tablets from your prescription, check off taken doses, and arm audio chime alarms.
                   </p>
                 </div>
@@ -2203,23 +2150,16 @@ export default function DashboardPortal({
 
         {/* STEP 5: DIET & NUTRITION TAB */}
         {activeStep === 'diet' && (
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-xl)', padding: '2rem', marginBottom: '2rem' }}>
+          <div className="portal-step-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <span style={{
-                  background: '#eef2ff',
-                  color: '#4f46e5',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  padding: '3px 10px',
-                  borderRadius: '9999px'
-                }}>
+                <span className="portal-step-badge">
                   Step 4 of 5
                 </span>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
+                <h2 className="portal-step-title">
                   4. Post-Discharge Diet &amp; Clinical Nutrition
                 </h2>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                <p className="portal-step-subtitle">
                   Tailored meal recommendations, foods that promote tissue healing, and items to strictly avoid with your medications.
                 </p>
               </div>
@@ -2290,23 +2230,16 @@ export default function DashboardPortal({
 
         {/* STEP 6: CONFUSION SAFETY GUARD TAB */}
         {activeStep === 'confusion' && (
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-xl)', padding: '2rem', marginBottom: '2rem' }}>
+          <div className="portal-step-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <span style={{
-                  background: '#eef2ff',
-                  color: '#4f46e5',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  padding: '3px 10px',
-                  borderRadius: '9999px'
-                }}>
+                <span className="portal-step-badge">
                   Step 5 of 5
                 </span>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
+                <h2 className="portal-step-title">
                   5. Medication Confusion Guard &amp; LASA Drug Safety
                 </h2>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                <p className="portal-step-subtitle">
                   Verify high-risk look-alike sound-alike (LASA) pharmaceutical drug confusions to prevent adverse events.
                 </p>
               </div>

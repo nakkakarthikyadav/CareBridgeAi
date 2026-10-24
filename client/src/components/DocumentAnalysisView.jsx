@@ -248,34 +248,34 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
   };
 
   return (
-    <div style={{ background: '#ffffff', borderRadius: '16px' }}>
+    <div style={{ background: 'var(--bg-card, #ffffff)', borderRadius: '16px' }}>
       {/* Module Title & Introduction */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
           <span style={{
-            background: '#ffffff',
-            color: '#000000',
+            background: '#eef2ff',
+            color: '#4f46e5',
             fontSize: '0.75rem',
             fontWeight: 800,
-            padding: '3px 10px',
+            padding: '3px 12px',
             borderRadius: '9999px',
-            border: '1.5px solid #000000'
+            border: '1px solid #c7d2fe'
           }}>
             Vision OCR &amp; Medical Translation
           </span>
-          <span style={{ fontSize: '0.8rem', color: '#111827', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
             Automated extraction of medicines, doses &amp; schedules
           </span>
         </div>
-        <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#000000', margin: '4px 0' }}>
+        <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--navy, #0f172a)', margin: '4px 0' }}>
           Upload Document or Doctor's Prescription
         </h3>
-        <p style={{ margin: 0, fontSize: '0.875rem', color: '#111827' }}>
+        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-main, #475569)', lineHeight: 1.5 }}>
           Upload your doctor's handwritten note or hospital discharge paperwork once. All medications will be parsed and organized into their respective sections.
         </p>
       </div>
 
-      {/* Mode Selection Tabs (Strict Black and White) */}
+      {/* Mode Selection Tabs with Vibrant Clinical Palette */}
       <div style={{
         display: 'flex',
         gap: '8px',
@@ -292,9 +292,9 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             flex: '1 1 200px',
             padding: '10px 16px',
             borderRadius: '9px',
-            border: activeTab === 'upload' ? '1.5px solid #000000' : '1px solid transparent',
-            background: activeTab === 'upload' ? '#000000' : 'transparent',
-            color: activeTab === 'upload' ? '#ffffff' : '#000000',
+            border: activeTab === 'upload' ? '1.5px solid #4f46e5' : '1px solid transparent',
+            background: activeTab === 'upload' ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'transparent',
+            color: activeTab === 'upload' ? '#ffffff' : '#64748b',
             fontWeight: 800,
             fontSize: '0.85rem',
             cursor: 'pointer',
@@ -302,7 +302,8 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            transition: 'all 0.15s ease'
+            transition: 'all 0.15s ease',
+            boxShadow: activeTab === 'upload' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none'
           }}
         >
           <span style={{ fontSize: '1.1rem' }}>📤</span>
@@ -316,9 +317,9 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             flex: '1 1 200px',
             padding: '10px 16px',
             borderRadius: '9px',
-            border: activeTab === 'paste' ? '1.5px solid #000000' : '1px solid transparent',
-            background: activeTab === 'paste' ? '#000000' : 'transparent',
-            color: activeTab === 'paste' ? '#ffffff' : '#000000',
+            border: activeTab === 'paste' ? '1.5px solid #4f46e5' : '1px solid transparent',
+            background: activeTab === 'paste' ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'transparent',
+            color: activeTab === 'paste' ? '#ffffff' : '#64748b',
             fontWeight: 800,
             fontSize: '0.85rem',
             cursor: 'pointer',
@@ -326,7 +327,8 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            transition: 'all 0.15s ease'
+            transition: 'all 0.15s ease',
+            boxShadow: activeTab === 'paste' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none'
           }}
         >
           <span style={{ fontSize: '1.1rem' }}>✍️</span>
@@ -344,8 +346,8 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             onDrop={handleDrop}
             onClick={() => fileInputRef.current && fileInputRef.current.click()}
             style={{
-              border: isDragOver ? '2.5px dashed #000000' : '2px dashed #000000',
-              background: isDragOver ? '#f1f5f9' : '#ffffff',
+              border: isDragOver ? '2.5px dashed #4f46e5' : '2px dashed #c7d2fe',
+              background: isDragOver ? '#eef2ff' : '#f8faff',
               borderRadius: '16px',
               padding: '2.5rem 1.5rem',
               textAlign: 'center',
@@ -377,22 +379,22 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                   width: '56px',
                   height: '56px',
                   borderRadius: '50%',
-                  background: '#f8fafc',
-                  color: '#000000',
+                  background: '#eef2ff',
+                  color: '#4f46e5',
                   fontSize: '1.8rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 1rem auto',
-                  border: '1.5px solid #000000'
+                  border: '1.5px solid #c7d2fe'
                 }}>
                   📄
                 </div>
 
-                <h4 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#000000', margin: '0 0 6px 0' }}>
+                <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--navy, #0f172a)', margin: '0 0 6px 0' }}>
                   Click to Browse or Drag &amp; Drop Prescription Here
                 </h4>
-                <p style={{ fontSize: '0.875rem', color: '#111827', maxWidth: '520px', margin: '0 auto 1.5rem auto' }}>
+                <p style={{ fontSize: '0.875rem', color: '#64748b', maxWidth: '520px', margin: '0 auto 1.5rem auto' }}>
                   Upload a photo of handwritten doctor cursive, smartphone snapshot of prescription, or digital hospital PDF summary.
                 </p>
 
@@ -402,9 +404,9 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                     type="button"
                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
                     style={{
-                      background: '#000000',
+                      background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
                       color: '#ffffff',
-                      border: '2px solid #000000',
+                      border: 'none',
                       borderRadius: '8px',
                       padding: '11px 22px',
                       fontSize: '0.875rem',
@@ -412,7 +414,8 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(79, 70, 229, 0.28)'
                     }}
                   >
                     <span>📂</span>
@@ -423,9 +426,9 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                     type="button"
                     onClick={() => cameraInputRef.current && cameraInputRef.current.click()}
                     style={{
-                      background: '#ffffff',
-                      color: '#000000',
-                      border: '2px solid #000000',
+                      background: '#ecfdf5',
+                      color: '#059669',
+                      border: '1.5px solid #86efac',
                       borderRadius: '8px',
                       padding: '11px 20px',
                       fontSize: '0.875rem',
@@ -441,7 +444,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                   </button>
                 </div>
 
-                <div style={{ marginTop: '1.25rem', fontSize: '0.75rem', color: '#444444' }}>
+                <div style={{ marginTop: '1.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>
                   Supported formats: JPG, PNG, PDF, HEIC up to 25MB • Vision AI OCR enabled
                 </div>
               </div>
@@ -450,12 +453,13 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
               <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'left' }}>
                 <div style={{
                   background: '#ffffff',
-                  border: '2px solid #000000',
+                  border: '1.5px solid #e2e8f0',
                   borderRadius: '12px',
                   padding: '1.25rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px'
+                  gap: '16px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
                 }}>
                   {filePreviewUrl ? (
                     <img
@@ -466,7 +470,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                         height: '64px',
                         objectFit: 'cover',
                         borderRadius: '8px',
-                        border: '1.5px solid #000000'
+                        border: '1px solid #cbd5e1'
                       }}
                     />
                   ) : (
@@ -475,22 +479,22 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                       height: '64px',
                       borderRadius: '8px',
                       background: '#f1f5f9',
-                      color: '#000000',
+                      color: '#4f46e5',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '1.8rem',
-                      border: '1px solid #000000'
+                      border: '1px solid #e2e8f0'
                     }}>
                       📑
                     </div>
                   )}
 
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#000000', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       {selectedFile.name}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#111827', marginTop: '2px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
                       Size: {(selectedFile.size / 1024).toFixed(1)} KB • Type: {selectedFile.type || 'Document'}
                     </div>
                   </div>
@@ -499,11 +503,11 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                     type="button"
                     onClick={handleRemoveFile}
                     style={{
-                      background: '#ffffff',
-                      border: '1.5px solid #000000',
-                      color: '#000000',
+                      background: '#fff1f2',
+                      border: '1.5px solid #fecdd3',
+                      color: '#e11d48',
                       borderRadius: '8px',
-                      padding: '8px 12px',
+                      padding: '8px 14px',
                       fontSize: '0.78rem',
                       fontWeight: 800,
                       cursor: 'pointer'
@@ -520,9 +524,9 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#000000',
+                      color: '#4f46e5',
                       fontSize: '0.8rem',
-                      fontWeight: 800,
+                      fontWeight: 700,
                       cursor: 'pointer',
                       textDecoration: 'underline'
                     }}
@@ -540,7 +544,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
       {activeTab === 'paste' && (
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ marginBottom: '0.5rem' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#000000' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>
               Paste Hospital Discharge Summary or Prescription Text
             </label>
           </div>
@@ -554,9 +558,10 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
               width: '100%',
               padding: '1rem',
               borderRadius: '12px',
-              border: '2px solid #000000',
+              border: '1.5px solid #cbd5e1',
               fontSize: '0.875rem',
-              color: '#000000',
+              color: '#0f172a',
+              background: '#ffffff',
               fontFamily: 'inherit',
               lineHeight: 1.5,
               resize: 'vertical',
@@ -567,7 +572,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
         </div>
       )}
 
-      {/* Control Bar: Document Type & Primary Analyze Button (Black & White) */}
+      {/* Control Bar: Document Type & Primary Analyze Button */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -575,12 +580,12 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
         flexWrap: 'wrap',
         gap: '1rem',
         padding: '1.25rem',
-        background: '#ffffff',
+        background: '#f8fafc',
         borderRadius: '14px',
-        border: '2px solid #000000'
+        border: '1.5px solid #e2e8f0'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#000000' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#334155' }}>
             Document Classification:
           </span>
           <select
@@ -589,10 +594,10 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             style={{
               padding: '8px 14px',
               borderRadius: '8px',
-              border: '1.5px solid #000000',
+              border: '1.5px solid #cbd5e1',
               fontSize: '0.85rem',
               fontWeight: 700,
-              color: '#000000',
+              color: '#1e293b',
               background: '#ffffff',
               cursor: 'pointer'
             }}
@@ -609,18 +614,19 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
           onClick={handleAnalyze}
           disabled={loading || (!selectedFile && !inputText)}
           style={{
-            background: '#000000',
+            background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
             color: '#ffffff',
-            border: '2px solid #000000',
+            border: 'none',
             borderRadius: '8px',
             padding: '12px 28px',
             fontSize: '0.9rem',
-            fontWeight: 900,
+            fontWeight: 800,
             cursor: loading || (!selectedFile && !inputText) ? 'not-allowed' : 'pointer',
             opacity: loading || (!selectedFile && !inputText) ? 0.6 : 1,
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
           }}
         >
           {loading ? (
@@ -659,12 +665,12 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
 
       {/* ================= RESULTS CONFIRMATION & ROUTING ================= */}
       {result && (
-        <div style={{ marginTop: '2rem', borderTop: '2px solid #000000', paddingTop: '1.5rem' }}>
+        <div style={{ marginTop: '2rem', borderTop: '1.5px solid #e2e8f0', paddingTop: '1.5rem' }}>
           
-          {/* Top Success Banner with Clean Black & White Styling */}
+          {/* Top Success Banner with Clean Clinical Styling */}
           <div style={{
-            background: '#ffffff',
-            border: '2px solid #000000',
+            background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+            border: '1.5px solid #86efac',
             borderRadius: '14px',
             padding: '1.5rem',
             marginBottom: '1.5rem',
@@ -672,16 +678,28 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: '1.25rem'
+            gap: '1.25rem',
+            boxShadow: '0 4px 16px rgba(16, 185, 129, 0.08)'
           }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.3rem' }}>✓</span>
+                <span style={{
+                  background: '#059669',
+                  color: '#ffffff',
+                  fontSize: '0.9rem',
+                  fontWeight: 900,
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>✓</span>
                 <h4 style={{
                   margin: 0,
                   fontSize: '1.2rem',
-                  fontWeight: 900,
-                  color: '#000000'
+                  fontWeight: 800,
+                  color: '#065f46'
                 }}>
                   Prescription &amp; Medical Data Decoded &amp; Synchronized
                 </h4>

@@ -2855,4 +2855,246 @@ body.theme-dark {
 [data-theme="dark"] .diet-option-desc {
   color: #94a3b8;
 }
+
+/* ==========================================================================
+   Clinical Prescriptions & Portal Steps Design System
+   Harmonized color palette, responsive cards, Dark/Light mode parity
+   ========================================================================== */
+
+.portal-step-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+[data-theme="dark"] .portal-step-card {
+  background: #111827 !important;
+  border-color: #1f2937 !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+.portal-step-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 6px 0 2px 0;
+  transition: color 0.2s ease;
+}
+
+[data-theme="dark"] .portal-step-title {
+  color: #f8fafc !important;
+}
+
+.portal-step-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  transition: color 0.2s ease;
+}
+
+[data-theme="dark"] .portal-step-subtitle {
+  color: #94a3b8 !important;
+}
+
+.portal-step-badge {
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+[data-theme="dark"] .portal-step-badge {
+  background: #1e1b4b !important;
+  color: #a5b4fc !important;
+  border-color: #3730a3 !important;
+}
+
+/* Prescription Card */
+.clinical-rx-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-left: 5px solid #4f46e5;
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.clinical-rx-card:hover {
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.09), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .clinical-rx-card {
+  background: #131b2e !important;
+  border-color: #1e293b !important;
+  border-left-color: #6366f1 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.clinical-rx-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 8px 0 4px 0;
+}
+
+[data-theme="dark"] .clinical-rx-title {
+  color: #f8fafc !important;
+}
+
+/* Filter Buttons Group */
+.rx-filter-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+  border-bottom: 1.5px solid #e2e8f0;
+  padding-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+[data-theme="dark"] .rx-filter-group {
+  border-bottom-color: #1e293b !important;
+}
+
+.rx-filter-btn {
+  padding: 7px 16px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* All Prescriptions Filter: Indigo theme */
+.rx-filter-btn-all {
+  background: #f5f3ff;
+  color: #4f46e5;
+  border: 1.5px solid #ddd6fe;
+}
+.rx-filter-btn-all.active {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  color: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+/* Active Courses Filter: Emerald theme */
+.rx-filter-btn-active {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1.5px solid #a7f3d0;
+}
+.rx-filter-btn-active.active {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
+/* Refills Filter: Amber theme */
+.rx-filter-btn-refills {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1.5px solid #fde68a;
+}
+.rx-filter-btn-refills.active {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+  border-color: #d97706;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+[data-theme="dark"] .rx-filter-btn-all {
+  background: #1e1b4b;
+  color: #c7d2fe;
+  border-color: #3730a3;
+}
+[data-theme="dark"] .rx-filter-btn-active {
+  background: #064e3b;
+  color: #a7f3d0;
+  border-color: #065f46;
+}
+[data-theme="dark"] .rx-filter-btn-refills {
+  background: #451a03;
+  color: #fde68a;
+  border-color: #78350f;
+}
+
+/* Medication Item in Prescription */
+.clinical-med-card {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-left: 4px solid #3b82f6;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+}
+
+.clinical-med-card:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+[data-theme="dark"] .clinical-med-card {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+  border-left-color: #60a5fa !important;
+}
+
+.clinical-med-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+[data-theme="dark"] .clinical-med-name {
+  color: #f8fafc !important;
+}
+
+.clinical-med-dosage {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #bfdbfe;
+}
+
+[data-theme="dark"] .clinical-med-dosage {
+  background: #1e3a8a !important;
+  color: #bfdbfe !important;
+  border-color: #2563eb !important;
+}
+
+.clinical-med-schedule {
+  font-size: 0.8rem;
+  color: #047857;
+  font-weight: 800;
+  margin-bottom: 4px;
+  background: #ecfdf5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  border: 1px solid #a7f3d0;
+}
+
+[data-theme="dark"] .clinical-med-schedule {
+  background: #064e3b !important;
+  color: #a7f3d0 !important;
+  border-color: #065f46 !important;
+}
+
 
