@@ -94,7 +94,7 @@ def detect_confusions_with_gemini(document_text: str, api_key: str):
     """
     Uses Gemini LLM API to analyze document for genuine medical ambiguities.
     """
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
     prompt = f"""You are the 'Confusion Detector' module for CareBridge AI, a patient safety assistant.
 Analyze this hospital discharge summary text and identify any instructions that are potentially unclear, incomplete, or contradictory.

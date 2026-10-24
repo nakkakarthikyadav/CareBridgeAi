@@ -46,14 +46,6 @@ export default function AboutTrustSection({ onOpenWorkspace }) {
             <span>Scan Prescription</span>
             <span>↗</span>
           </button>
-
-          <div className="architects-signature">
-            <div className="signature-avatar">SC</div>
-            <div className="signature-text">
-              <strong>Sree Charan &amp; Karthik</strong>
-              <span>Lead Clinical AI Architects • CareBridge AI</span>
-            </div>
-          </div>
         </div>
       </div>
     </section>

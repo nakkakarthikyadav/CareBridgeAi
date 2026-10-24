@@ -14,7 +14,7 @@ export default function Footer({ onOpenWorkspace }) {
             Empowering patients, families, and hospitals with automated handwriting recognition and verified medication safety protocols.
           </p>
           <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-            Engineered by <strong>Sree Charan</strong> &amp; <strong>Karthik</strong>
+            CareBridge Clinical AI Architecture • Powered by Google Gemini AI
           </div>
         </div>
 
@@ -41,8 +41,8 @@ export default function Footer({ onOpenWorkspace }) {
         <div className="footer-col">
           <h5>Emergency &amp; Hours</h5>
           <ul>
-            <li><strong style={{ color: '#ef4444' }}>Emergency:</strong> Dial 108 / 911</li>
-            <li><strong style={{ color: '#e2e8f0' }}>Hotline:</strong> 1-800-CARE-AI</li>
+            <li><strong style={{ color: '#ef4444' }}>Hospital Emergency:</strong> Direct Call From Prescription</li>
+            <li><strong style={{ color: '#e2e8f0' }}>Outpatient Care:</strong> 24/7 Recovery Support</li>
             <li><span style={{ color: '#94a3b8' }}>Mon - Sun: 24/7 Monitoring</span></li>
             <li><span style={{ color: '#94a3b8' }}>Chicago, IL • Suite 400</span></li>
           </ul>

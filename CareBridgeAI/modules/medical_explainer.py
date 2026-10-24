@@ -156,7 +156,7 @@ def generate_ai_explanation(document_text: str, api_key: str):
     Calls Gemini API to generate patient-friendly explanation,
     strictly preserving medication names, dosages, and dates.
     """
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
     prompt = f"""You are the Medical Explainer module for CareBridge AI.
 Your job is to convert this hospital discharge summary or doctor prescription into clear, simple, patient-friendly language for an elderly patient or family caregiver.
@@ -231,7 +231,7 @@ def answer_patient_question(document_text: str, question: str, api_key: str = No
     key = api_key or os.getenv("GEMINI_API_KEY")
     if key and key.strip() and key != "your_gemini_api_key_here":
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={key.strip()}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key.strip()}"
             prompt = f"""You are the CareBridge AI Patient Assistant.
 Answer the patient's question STRICTLY based on the provided discharge summary or prescription text below.
 

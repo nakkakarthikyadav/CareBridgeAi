@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { playMedicalChime } from '../utils/audioChime';
 
 export default function Navbar({
@@ -14,6 +14,79 @@ export default function Navbar({
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [alertsEnabled, setAlertsEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('carebridge_in_app_alerts_enabled');
+      return saved !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [alertsDropdownOpen, setAlertsDropdownOpen] = useState(false);
+  const [upcomingMeds, setUpcomingMeds] = useState([]);
+
+  // Sync upcoming medications and outside click handling
+  useEffect(() => {
+    const updateUpcoming = () => {
+      try {
+        const saved = localStorage.getItem('carebridge_meds_checklist');
+        if (saved) {
+          const list = JSON.parse(saved);
+          if (Array.isArray(list)) {
+            setUpcomingMeds(list.filter(m => !m.done));
+          }
+        }
+      } catch {}
+    };
+    updateUpcoming();
+    window.addEventListener('carebridge_meds_updated', updateUpcoming);
+    return () => window.removeEventListener('carebridge_meds_updated', updateUpcoming);
+  }, []);
+
+  useEffect(() => {
+    if (!alertsDropdownOpen) return;
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.nav-alerts-wrapper')) {
+        setAlertsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [alertsDropdownOpen]);
+
+  const handleToggleAlerts = (e) => {
+    if (e) e.stopPropagation();
+    const nextState = !alertsEnabled;
+    setAlertsEnabled(nextState);
+    try {
+      localStorage.setItem('carebridge_in_app_alerts_enabled', nextState ? 'true' : 'false');
+      window.dispatchEvent(new Event('carebridge_alerts_toggled'));
+    } catch {}
+
+    if (nextState) {
+      playMedicalChime();
+      if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+      if (setToastMessage) setToastMessage("🔔 In-App Medication Alerts: Allowed & Active!");
+    } else {
+      if (setToastMessage) setToastMessage("🔕 In-App Medication Alerts: Muted");
+    }
+  };
+
+  const handleTriggerTestFromNav = (e) => {
+    if (e) e.stopPropagation();
+    setAlertsDropdownOpen(false);
+    const firstMed = upcomingMeds[0] || {
+      id: 'test_' + Date.now(),
+      title: 'Diclofenac 50mg',
+      dose: '1 tablet (50mg)',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      instructions: 'Take with water after meals.'
+    };
+    window.dispatchEvent(new CustomEvent('carebridge_test_alarm', { detail: firstMed }));
+    if (setToastMessage) setToastMessage("🔔 In-app dose reminder test triggered!");
+  };
 
   const handleTestChime = () => {
     playMedicalChime();
@@ -127,10 +200,10 @@ export default function Navbar({
           </li>
           <li>
             <button
-              className={`nav-link-btn ${activeTab === 'reminders' ? 'active' : ''}`}
-              onClick={() => scrollToSection('reminders')}
+              className={`nav-link-btn ${activeTab === 'recovery' ? 'active' : ''}`}
+              onClick={() => scrollToSection('recovery')}
             >
-              Timetable &amp; Alarms
+              Track Medications
             </button>
           </li>
           <li>
@@ -143,7 +216,7 @@ export default function Navbar({
           </li>
         </ul>
 
-        {/* Right Actions: Search, Chime, Profile / Sign In / Sign Out */}
+        {/* Right Actions: Search, Bell Icon for In-App Alerts, Profile / Sign In */}
         <div className="navbar-right-actions">
           <div className="search-box-pill desktop-only">
             <input
@@ -156,6 +229,167 @@ export default function Navbar({
               }}
             />
             <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>🔍</span>
+          </div>
+
+          {/* In-App Alerts Bell Icon (Before Sign In key) */}
+          <div className="nav-alerts-wrapper" style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="btn-nav-alerts-bell"
+              onClick={() => setAlertsDropdownOpen(!alertsDropdownOpen)}
+              title={alertsEnabled ? "In-App Alerts: Allowed (Click to manage)" : "In-App Alerts: Muted (Click to allow)"}
+              style={{
+                background: alertsEnabled ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' : '#f1f5f9',
+                border: `1.5px solid ${alertsEnabled ? '#f59e0b' : '#cbd5e1'}`,
+                borderRadius: '8px',
+                padding: '6px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: alertsEnabled ? '#92400e' : '#64748b',
+                fontWeight: 700,
+                fontSize: '0.825rem',
+                transition: 'all 0.2s ease',
+                boxShadow: alertsEnabled ? '0 2px 8px rgba(245, 158, 11, 0.25)' : 'none'
+              }}
+            >
+              <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{alertsEnabled ? '🔔' : '🔕'}</span>
+              <span className="desktop-only" style={{ fontSize: '0.8rem', fontWeight: 800 }}>
+                {alertsEnabled ? 'Alerts ON' : 'Alerts OFF'}
+              </span>
+              {alertsEnabled && (
+                <span style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  boxShadow: '0 0 6px #10b981'
+                }} />
+              )}
+            </button>
+
+            {/* Dropdown Menu on Click */}
+            {alertsDropdownOpen && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: '310px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 30px rgba(0, 0, 0, 0.15)',
+                  padding: '1rem',
+                  zIndex: 10001,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  animation: 'fadeIn 0.2s ease'
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '1.1rem' }}>🔔</span>
+                    <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>In-App Medication Alerts</strong>
+                  </div>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    background: alertsEnabled ? '#dcfce7' : '#f1f5f9',
+                    color: alertsEnabled ? '#15803d' : '#64748b'
+                  }}>
+                    {alertsEnabled ? '🟢 ACTIVE' : '⚪ MUTED'}
+                  </span>
+                </div>
+
+                {/* Master Allow / Mute Switch */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#f8fafc',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#1e293b' }}>
+                      Allow In-App Alerts
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Sound chime & modal at dose time
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleAlerts}
+                    style={{
+                      background: alertsEnabled ? '#10b981' : '#94a3b8',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '20px',
+                      padding: '4px 12px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {alertsEnabled ? 'Allowed ✓' : 'Allow Alerts'}
+                  </button>
+                </div>
+
+                {/* Upcoming Schedule Info */}
+                <div style={{ fontSize: '0.78rem', color: '#475569' }}>
+                  <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
+                    Scheduled Doses ({upcomingMeds.length}):
+                  </div>
+                  {upcomingMeds.length === 0 ? (
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>No active medications in checklist.</div>
+                  ) : (
+                    <div style={{ maxHeight: '110px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {upcomingMeds.slice(0, 4).map(m => (
+                        <div key={m.id} style={{ background: '#f8fafc', padding: '4px 8px', borderRadius: '4px', fontSize: '0.72rem', display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+                            {m.title || m.text}
+                          </span>
+                          <span style={{ color: '#4f46e5', fontWeight: 700 }}>
+                            {m.time || m.schedule || 'Scheduled'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Action: Test In-App Alert */}
+                <button
+                  type="button"
+                  onClick={handleTriggerTestFromNav}
+                  style={{
+                    background: '#e0e7ff',
+                    color: '#3730a3',
+                    border: '1px solid #c7d2fe',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>🔔</span> Test In-App Alert Now
+                </button>
+              </div>
+            )}
           </div>
 
           {/* User Sign In / Profile dropdown */}
@@ -323,10 +557,10 @@ export default function Navbar({
             </li>
             <li>
               <button
-                className={`mobile-nav-link ${activeTab === 'reminders' ? 'active' : ''}`}
-                onClick={() => scrollToSection('reminders')}
+                className={`mobile-nav-link ${activeTab === 'recovery' ? 'active' : ''}`}
+                onClick={() => scrollToSection('recovery')}
               >
-                ⏰ Timetable &amp; Hourly Alarms
+                💊 Track Prescribed Medications
               </button>
             </li>
             <li>

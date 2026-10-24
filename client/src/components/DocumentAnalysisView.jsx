@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { API_BASE_URL } from '../utils/apiConfig';
+import { extractPhoneFromText, saveHospitalContact } from '../utils/hospitalContact';
 
 export default function DocumentAnalysisView({ currentLang, onSavePrescription, onNavigateToPrescriptions, onNavigateToOverview, onNavigateToStep }) {
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'paste'
@@ -17,7 +18,8 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
   const cameraInputRef = useRef(null);
 
   const autoSavePrescription = (data, previewUrl, fileObj) => {
-    const medsList = (data.medications || []).map((m, idx) => ({
+    const rawMeds = data.medications || data.medicationsList || [];
+    const medsList = rawMeds.map((m, idx) => ({
       id: `med_${Date.now()}_${idx}`,
       name: m.name || m.drugName || 'Medication',
       dosage: m.dosage || 'As directed',
@@ -26,11 +28,23 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
       critical: Boolean(m.criticalWarning || m.caution)
     }));
 
+    const extractedPhone = data.hospitalPhone || 
+      extractPhoneFromText(data.detectedClinic) || 
+      extractPhoneFromText(data.summary) || 
+      extractPhoneFromText(inputText);
+    const hospitalName = data.hospitalName || data.detectedClinic || 'Outpatient Specialty Clinic';
+
+    if (extractedPhone) {
+      saveHospitalContact(extractedPhone, hospitalName);
+    }
+
     const newPrescription = {
       id: `rx_${Date.now()}`,
       title: docType === 'Handwritten Prescription' ? "Doctor's Handwritten Prescription" : (data.docTitle || "Hospital Discharge Prescription"),
       doctor: data.detectedDoctor || 'Attending Physician',
       clinic: data.detectedClinic || 'Outpatient Specialty Clinic',
+      hospitalName: hospitalName,
+      hospitalPhone: extractedPhone || '',
       date: new Date().toISOString().split('T')[0],
       diagnosis: (data.keyDiagnoses && data.keyDiagnoses.join(', ')) || 'Clinical Post-Discharge Treatment',
       status: 'Active',
@@ -56,30 +70,56 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
       };
     }
 
-    const newChecklistMeds = medsList.map((m, idx) => ({
-      id: `chk_med_${Date.now()}_${idx}`,
-      title: `${m.name} ${m.dosage !== 'As directed' ? m.dosage : ''}`.trim(),
-      time: m.schedule?.toLowerCase().includes('night') || m.schedule?.toLowerCase().includes('evening') ? '08:00 PM' : '08:00 AM',
-      dose: m.dosage || '1 dose',
-      done: false,
-      alarmEnabled: true
-    }));
+    const newChecklistMeds = medsList.map((m, idx) => {
+      const drugTitle = `${m.name} ${m.dosage !== 'As directed' ? m.dosage : ''}`.trim();
+      return {
+        id: `chk_med_${Date.now()}_${idx}`,
+        title: drugTitle,
+        text: drugTitle,
+        time: m.schedule?.toLowerCase().includes('night') || m.schedule?.toLowerCase().includes('evening') ? '08:00 PM' : '08:00 AM',
+        dose: m.dosage || '1 dose',
+        schedule: m.schedule || '',
+        instructions: m.instructions || m.purpose || '',
+        done: false,
+        alarmEnabled: true
+      };
+    });
 
-    // Sync daily home care checklist to Step 2 Daily Care Checklist
+    // Sync daily home care checklist to Step 4 Daily Recovery Checklist
     if (data.dailyCareChecklist && data.dailyCareChecklist.length > 0) {
       try {
         const adviceItems = data.dailyCareChecklist.map((task, idx) => ({
           id: `advice_${Date.now()}_${idx}`,
           title: task,
+          text: task,
           time: 'Daily Care',
           done: false
         }));
         const savedAdvice = localStorage.getItem('carebridge_advice_checklist');
         const listAdvice = savedAdvice ? JSON.parse(savedAdvice) : [];
-        const mergedAdvice = [...adviceItems, ...listAdvice.filter(a => !adviceItems.some(i => i.title === a.title))];
+        const mergedAdvice = [...adviceItems, ...listAdvice.filter(a => !adviceItems.some(i => (i.title === a.title || i.text === a.title)))];
         localStorage.setItem('carebridge_advice_checklist', JSON.stringify(mergedAdvice));
       } catch (err) {
         console.error('Failed to sync advice checklist to localStorage', err);
+      }
+    }
+
+    // Sync dietary restrictions to Step 4 Diet & Lifestyle Instructions
+    if (data.dietaryRestrictions && data.dietaryRestrictions.length > 0) {
+      try {
+        const dietItems = data.dietaryRestrictions.map((rule, idx) => ({
+          id: `diet_${Date.now()}_${idx}`,
+          title: rule,
+          text: rule,
+          time: 'Diet Rule',
+          done: false
+        }));
+        const savedDiet = localStorage.getItem('carebridge_diet_checklist');
+        const listDiet = savedDiet ? JSON.parse(savedDiet) : [];
+        const mergedDiet = [...dietItems, ...listDiet.filter(d => !dietItems.some(i => (i.title === d.title || i.text === d.title)))];
+        localStorage.setItem('carebridge_diet_checklist', JSON.stringify(mergedDiet));
+      } catch (err) {
+        console.error('Failed to sync diet checklist to localStorage', err);
       }
     }
 
@@ -174,8 +214,18 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
 
       const resData = await response.json();
       if (resData.success && resData.data) {
-        setResult(resData.data);
-        autoSavePrescription(resData.data, filePreviewUrl, selectedFile);
+        const normData = { ...resData.data };
+        if (!normData.medications && normData.medicationsList) {
+          normData.medications = normData.medicationsList.map(m => ({
+            name: m.drugName || m.name || 'Medication',
+            dosage: m.dosage || 'As directed',
+            schedule: m.frequency || m.schedule || 'Daily',
+            instructions: m.instructions || m.caution || 'Follow physician instructions.',
+            criticalWarning: m.caution || ''
+          }));
+        }
+        setResult(normData);
+        autoSavePrescription(normData, filePreviewUrl, selectedFile);
       } else {
         setError(resData.error || 'Failed to process document. Please try again.');
       }
@@ -667,7 +717,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
               {onNavigateToStep && (
                 <button
                   type="button"
-                  onClick={() => onNavigateToStep('reminders')}
+                  onClick={() => onNavigateToStep('followup')}
                   style={{
                     background: '#ffffff',
                     color: '#334155',
@@ -682,7 +732,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                     gap: '6px'
                   }}
                 >
-                  <span>Dose Timetable (Step 2)</span>
+                  <span>Follow-Up Visits (Step 2)</span>
                   <span>→</span>
                 </button>
               )}
@@ -747,48 +797,8 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Option 2 • Daily Alarms
-                </span>
-                <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
-                  Dose Timetable &amp; Care Checklist
-                </h5>
-                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
-                  Daily medication times and home care instructions have been synchronized into your daily schedule.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onNavigateToStep ? onNavigateToStep('reminders') : onNavigateToPrescriptions()}
-                style={{
-                  marginTop: '1rem',
-                  background: '#eef2ff',
-                  color: '#4f46e5',
-                  border: '1px solid #c7d2fe',
-                  borderRadius: '6px',
-                  padding: '8px 14px',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                Go to Step 2: Dose Timetable →
-              </button>
-            </div>
-
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-            }}>
-              <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Option 3 • Clinic Checkups
+                  Option 2 • Clinic Checkups
                 </span>
                 <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
                   Follow-Up Visits
@@ -812,7 +822,47 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                   cursor: 'pointer'
                 }}
               >
-                Go to Step 3: Follow-Up Visits →
+                Go to Step 2: Follow-Up Visits →
+              </button>
+            </div>
+
+            <div style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Option 3 • Daily Medication Tracking
+                </span>
+                <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
+                  Track Prescribed Medications
+                </h5>
+                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
+                  Daily medication checklist, audio alarm chimes, and live adherence tracker.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateToStep ? onNavigateToStep('recovery') : onNavigateToPrescriptions()}
+                style={{
+                  marginTop: '1rem',
+                  background: '#eef2ff',
+                  color: '#4f46e5',
+                  border: '1px solid #c7d2fe',
+                  borderRadius: '6px',
+                  padding: '8px 14px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Go to Step 3: Track Medications →
               </button>
             </div>
           </div>

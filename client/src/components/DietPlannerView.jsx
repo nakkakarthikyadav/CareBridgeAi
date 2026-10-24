@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../utils/apiConfig';
 
 const PRESET_CONDITIONS = [
@@ -10,31 +10,79 @@ const PRESET_CONDITIONS = [
 ];
 
 export default function DietPlannerView() {
+  const [detectedRx, setDetectedRx] = useState(null);
+  const [showCustomCondition, setShowCustomCondition] = useState(false);
   const [condition, setCondition] = useState(PRESET_CONDITIONS[0]);
   const [preference, setPreference] = useState('Vegetarian / Mediterranean');
   const [allergies, setAllergies] = useState('None');
+  const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('carebridge_gemini_api_key') || '');
+  const [showKeyConfig, setShowKeyConfig] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [aiSource, setAiSource] = useState('');
   const [error, setError] = useState('');
+
+  // Auto-detect disease / diagnosis & active medications from prescription on file
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('carebridge_portal_prescriptions');
+      if (saved) {
+        const parsed = JSON.parse(saved).filter(p => p.id !== 'rx_1' && p.id !== 'rx_2' && !(p.title === 'Hospital Discharge Prescription' && p.doctor === 'Attending Physician' && !p.imagePreview));
+        if (parsed.length > 0) {
+          const rx = parsed[0];
+          setDetectedRx(rx);
+          if (rx.diagnosis && rx.diagnosis !== 'Clinical Post-Discharge Treatment') {
+            setCondition(rx.diagnosis);
+          } else if (rx.title) {
+            setCondition(rx.title);
+          }
+          setShowCustomCondition(false);
+        } else {
+          setShowCustomCondition(true);
+        }
+      } else {
+        setShowCustomCondition(true);
+      }
+    } catch (_) {
+      setShowCustomCondition(true);
+    }
+  }, []);
+
+  const handleSaveApiKey = (key) => {
+    setUserApiKey(key);
+    localStorage.setItem('carebridge_gemini_api_key', key.trim());
+  };
 
   const handleGenerate = async () => {
     setLoading(true);
     setError('');
 
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (userApiKey.trim()) {
+        headers['x-gemini-api-key'] = userApiKey.trim();
+      }
+
+      const activeMeds = (detectedRx?.medications || []).map(m => m.name || m.drugName || m).filter(Boolean);
+
       const response = await fetch(`${API_BASE_URL}/api/diet-plan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           condition,
+          diagnosis: condition,
+          medications: activeMeds,
+          symptoms: detectedRx?.notes || '',
           dietaryPreference: preference,
-          allergies
+          allergies,
+          apiKey: userApiKey.trim() || undefined
         })
       });
 
       const data = await response.json();
       if (data.success && data.data) {
         setResult(data.data);
+        setAiSource(data.aiSource || 'Clinical AI');
       } else {
         setError(data.error || 'Failed to generate dietary plan.');
       }
@@ -48,50 +96,221 @@ export default function DietPlannerView() {
 
   return (
     <section className="module-section">
-      <div className="module-header">
-        <span className="module-header-badge">Clinical Nutritionist</span>
-        <h2>Condition-Specific Recovery Diet Planner</h2>
-        <p>Accelerate tissue healing, manage drug-food interactions, and reduce systemic inflammation.</p>
+      <div className="module-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <span className="module-header-badge">Clinical Nutritionist</span>
+          <h2>Condition-Specific Recovery Diet Planner</h2>
+          <p>Accelerate tissue healing, manage drug-food interactions, and reduce systemic inflammation.</p>
+        </div>
+
+        {/* API Key settings trigger */}
+        <button
+          type="button"
+          onClick={() => setShowKeyConfig(!showKeyConfig)}
+          style={{
+            background: userApiKey ? '#eef2ff' : '#f8fafc',
+            border: `1px solid ${userApiKey ? '#c7d2fe' : '#e2e8f0'}`,
+            color: userApiKey ? '#4338ca' : '#64748b',
+            padding: '6px 14px',
+            borderRadius: '9999px',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <span>🔑</span>
+          <span>{userApiKey ? 'Gemini Key Configured' : 'Configure Gemini API Key'}</span>
+        </button>
       </div>
 
       <div className="module-body-card">
-        {/* Condition presets */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label className="form-label">Select Clinical Condition Protocol</label>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            {PRESET_CONDITIONS.map((cond, idx) => {
-              const isSelected = condition === cond;
-              return (
+        {/* Optional Gemini API Key Drawer */}
+        {showKeyConfig && (
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.5rem',
+            animation: 'fadeIn 0.2s ease'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <strong style={{ fontSize: '0.88rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>✨</span> Google Gemini AI Studio API Key
+              </strong>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                Auto-detected from server <code>.env</code> or override here
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="password"
+                placeholder="Paste your Gemini API key (AIzaSy...)"
+                className="form-input"
+                value={userApiKey}
+                onChange={(e) => handleSaveApiKey(e.target.value)}
+                style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.85rem' }}
+              />
+              {userApiKey && (
                 <button
-                  key={idx}
                   type="button"
-                  onClick={() => setCondition(cond)}
+                  onClick={() => handleSaveApiKey('')}
                   style={{
-                    background: isSelected ? 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)' : '#eef2ff',
-                    color: isSelected ? '#ffffff' : '#4338ca',
-                    border: `1px solid ${isSelected ? '#4f46e5' : '#c7d2fe'}`,
-                    padding: '8px 16px',
-                    borderRadius: '9999px',
-                    fontSize: '0.82rem',
+                    background: '#fee2e2',
+                    border: '1px solid #fecaca',
+                    color: '#b91c1c',
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.8rem',
                     fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                    boxShadow: isSelected ? '0 4px 12px rgba(79, 70, 229, 0.25)' : 'none'
+                    cursor: 'pointer'
                   }}
                 >
-                  {cond.split(' (')[0]}
+                  Clear
                 </button>
-              );
-            })}
+              )}
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px', marginBottom: 0 }}>
+              💡 If left blank, CareBridge AI automatically uses the <code>GEMINI_API_KEY</code> set in your backend <code>.env</code> file.
+            </p>
           </div>
+        )}
 
-          <input 
-            type="text" 
-            className="form-input" 
-            value={condition} 
-            onChange={(e) => setCondition(e.target.value)} 
-          />
-        </div>
+        {/* Prescription-Linked Clinical Profile */}
+        {detectedRx ? (
+          <div style={{
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)',
+            border: '2px solid #bbf7d0',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.5rem',
+            marginBottom: '1.5rem',
+            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.08)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>🩺</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Disease Extracted from Prescription
+                </span>
+                <span style={{ background: '#dcfce7', color: '#166534', fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '9999px', border: '1px solid #86efac' }}>
+                  ✓ Auto-Extracted
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCustomCondition(!showCustomCondition)}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#475569',
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {showCustomCondition ? '✕ Hide Custom Input' : '✏️ Edit or Change Disease'}
+              </button>
+            </div>
+
+            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: '4px 0 10px 0' }}>
+              {condition || detectedRx.diagnosis || detectedRx.title}
+            </div>
+
+            {detectedRx.medications && detectedRx.medications.length > 0 && (
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginTop: '10px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  💊 Prescribed Medications Evaluated for Food-Drug Safety:
+                </span>
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
+                  {detectedRx.medications.map(m => `${m.name || m.drugName || 'Medication'} ${m.dosage && m.dosage !== 'As directed' ? `(${m.dosage})` : ''}`).join(' • ')}
+                </span>
+              </div>
+            )}
+
+            <div style={{ marginTop: '12px', fontSize: '0.8rem', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>✨</span>
+              <span>Gemini AI extracts the exact dietary plan for this disease and protects against food-drug interactions. No typing required!</span>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            background: '#f8fafc',
+            border: '1.5px dashed #cbd5e1',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div>
+              <div style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.9rem' }}>
+                📄 No Prescription Uploaded Yet
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
+                Upload your doctor's prescription in Step 1 to automatically extract your disease and medications, or specify a condition below.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Condition presets (Shown only if custom toggle enabled or no prescription exists) */}
+        {(!detectedRx || showCustomCondition) && (
+          <div style={{
+            marginBottom: '1.5rem',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: 'var(--radius-md)',
+            padding: '1.25rem',
+            animation: 'fadeIn 0.2s ease'
+          }}>
+            <label className="form-label" style={{ fontWeight: 800, color: '#334155', marginBottom: '8px', display: 'block' }}>
+              Select Clinical Condition Protocol or Type Custom Condition
+            </label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              {PRESET_CONDITIONS.map((cond, idx) => {
+                const isSelected = condition === cond;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCondition(cond)}
+                    style={{
+                      background: isSelected ? 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)' : '#ffffff',
+                      color: isSelected ? '#ffffff' : '#4338ca',
+                      border: `1px solid ${isSelected ? '#4f46e5' : '#cbd5e1'}`,
+                      padding: '7px 14px',
+                      borderRadius: '9999px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      boxShadow: isSelected ? '0 4px 12px rgba(79, 70, 229, 0.25)' : 'none'
+                    }}
+                  >
+                    {cond.split(' (')[0]}
+                  </button>
+                );
+              })}
+            </div>
+
+            <input 
+              type="text" 
+              className="form-input" 
+              value={condition} 
+              placeholder="e.g. Type 2 Diabetes, Acute Bronchitis, Post-Op Cholecystectomy..."
+              onChange={(e) => setCondition(e.target.value)} 
+            />
+          </div>
+        )}
 
         <div className="diet-inputs-grid">
           <div>
@@ -130,7 +349,7 @@ export default function DietPlannerView() {
             boxShadow: '0 6px 20px rgba(79, 70, 229, 0.32)'
           }}
         >
-          {loading ? 'Consulting Clinical Nutrition Engine...' : '🥗 Generate Clinical Recovery Diet'}
+          {loading ? 'Consulting Gemini AI Nutrition Engine...' : (detectedRx ? `🥗 Generate Gemini AI Diet Plan for ${condition ? condition.split(' (')[0] : 'this Disease'}` : '🥗 Generate Clinical Recovery Diet')}
         </button>
 
         {error && (
@@ -142,30 +361,67 @@ export default function DietPlannerView() {
         {/* Results */}
         {result && (
           <div style={{ marginTop: '2.5rem', borderTop: '2px solid var(--border-light)', paddingTop: '2rem' }}>
+            {/* Header with AI Source badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '1.25rem' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Targeted Clinical Plan
+                </span>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--dark-indigo)', margin: '2px 0 0 0' }}>
+                  {result.identifiedDisease || condition || 'Clinical Recovery Protocol'}
+                </h3>
+              </div>
+              <span style={{
+                padding: '5px 14px',
+                borderRadius: '9999px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                background: aiSource?.includes('Gemini') ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#ecfdf5',
+                color: aiSource?.includes('Gemini') ? '#ffffff' : '#065f46',
+                border: aiSource?.includes('Gemini') ? 'none' : '1px solid #a7f3d0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: aiSource?.includes('Gemini') ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none'
+              }}>
+                {aiSource?.includes('Gemini') ? '✨ Google Gemini AI Active' : '🛡️ Clinical Nutrition Protocol'}
+              </span>
+            </div>
+
             {/* Rationale */}
             {result.dietaryRationale && (
               <div style={{ background: 'var(--primary-light)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem' }}>
                 <h4 style={{ color: 'var(--primary)', fontWeight: 800, marginBottom: '0.5rem' }}>
                   🧬 Recovery Nutrition Rationale
                 </h4>
-                <p style={{ lineHeight: 1.6, color: 'var(--text-main)' }}>{result.dietaryRationale}</p>
+                <p style={{ lineHeight: 1.6, color: 'var(--text-main)', margin: 0 }}>{result.dietaryRationale}</p>
               </div>
             )}
 
             {/* Foods to Emphasize & Avoid in 2 columns */}
-            <div className="diet-columns-grid">
+            <div className="diet-columns-grid" style={{ marginBottom: '1.5rem' }}>
               {/* Emphasize */}
               <div style={{ background: '#eef2ff', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid #c7d2fe' }}>
                 <h4 style={{ color: '#312e81', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>🟢</span> Foods to Emphasize
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {result.foodsToEmphasize?.map((f, i) => (
-                    <div key={i} style={{ background: '#ffffff', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #d1fae5' }}>
-                      <strong style={{ color: '#4338ca' }}>{f.food}</strong>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '2px' }}>{f.benefit}</div>
+                  {result.foodsToEmphasize && result.foodsToEmphasize.length > 0 ? (
+                    result.foodsToEmphasize.map((f, i) => {
+                      const title = typeof f === 'string' ? f.split(/[:\-–—]/)[0] : (f.food || f.name || f.title || 'Therapeutic Food');
+                      const desc = typeof f === 'string' ? (f.includes(':') ? f.split(':').slice(1).join(':') : 'Supports recovery') : (f.benefit || f.reason || f.description || 'Supports recovery');
+                      return (
+                        <div key={i} style={{ background: '#ffffff', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #d1fae5', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                          <strong style={{ color: '#4338ca', display: 'block', marginBottom: '2px' }}>{title}</strong>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.5 }}>{desc}</div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ background: '#ffffff', padding: '12px', borderRadius: 'var(--radius-md)', color: '#64748b', fontSize: '0.85rem' }}>
+                      No specific foods highlighted.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -175,12 +431,22 @@ export default function DietPlannerView() {
                   <span>🔴</span> Foods to Strictly Avoid
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {result.foodsToStrictlyAvoid?.map((f, i) => (
-                    <div key={i} style={{ background: '#ffffff', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #fee2e2' }}>
-                      <strong style={{ color: '#b91c1c' }}>{f.food}</strong>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '2px' }}>{f.reason}</div>
+                  {result.foodsToStrictlyAvoid && result.foodsToStrictlyAvoid.length > 0 ? (
+                    result.foodsToStrictlyAvoid.map((f, i) => {
+                      const title = typeof f === 'string' ? f.split(/[:\-–—]/)[0] : (f.food || f.name || f.title || 'Restricted Item');
+                      const desc = typeof f === 'string' ? (f.includes(':') ? f.split(':').slice(1).join(':') : 'Interferes with recovery') : (f.reason || f.benefit || f.description || 'Interferes with recovery');
+                      return (
+                        <div key={i} style={{ background: '#ffffff', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #fee2e2', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                          <strong style={{ color: '#b91c1c', display: 'block', marginBottom: '2px' }}>{title}</strong>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.5 }}>{desc}</div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ background: '#ffffff', padding: '12px', borderRadius: 'var(--radius-md)', color: '#64748b', fontSize: '0.85rem' }}>
+                      No severe food restrictions identified.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -194,19 +460,19 @@ export default function DietPlannerView() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 'var(--radius-md)' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Breakfast</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px' }}>{result.sampleMealPlan.breakfast}</p>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.breakfast}</p>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 'var(--radius-md)' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Lunch</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px' }}>{result.sampleMealPlan.lunch}</p>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.lunch}</p>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 'var(--radius-md)' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Snack</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px' }}>{result.sampleMealPlan.eveningSnack || result.sampleMealPlan.midMorningSnack}</p>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.eveningSnack || result.sampleMealPlan.midMorningSnack || 'Herbal tea with soaked nuts'}</p>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 'var(--radius-md)' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Dinner</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px' }}>{result.sampleMealPlan.dinner}</p>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.dinner}</p>
                   </div>
                 </div>
               </div>

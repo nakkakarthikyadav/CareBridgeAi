@@ -4,6 +4,7 @@ import ConfusionGuardView from './ConfusionGuardView';
 import DietPlannerView from './DietPlannerView';
 import TimelineView from './TimelineView';
 import DocumentAnalysisView from './DocumentAnalysisView';
+import { extractHospitalContact, directCallHospital } from '../utils/hospitalContact';
 import { playMedicalChime, triggerBrowserNotification } from '../utils/audioChime';
 
 export default function DashboardPortal({ 
@@ -21,11 +22,8 @@ export default function DashboardPortal({
   const [activeStep, setActiveStep] = useState(initialStep || 'overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (initialStep) {
-      setActiveStep(initialStep);
-    }
-  }, [initialStep]);
+  // Real-time In-App Medication Dose Alert Modal State
+  const [activeDoseAlert, setActiveDoseAlert] = useState(null);
 
   // Latest Prescriptions State (stored in localStorage)
   const [prescriptions, setPrescriptions] = useState(() => {
@@ -33,12 +31,50 @@ export default function DashboardPortal({
       const saved = localStorage.getItem('carebridge_portal_prescriptions');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Filter out legacy mock data
-        return parsed.filter(p => p.id !== 'rx_1' && p.id !== 'rx_2');
+        // Filter out legacy mock data & phantom unuploaded data
+        return parsed.filter(p => p.id !== 'rx_1' && p.id !== 'rx_2' && !(p.title === 'Hospital Discharge Prescription' && p.doctor === 'Attending Physician' && !p.imagePreview));
       }
     } catch {}
     return [];
   });
+
+  // Hospital Contact extracted from uploaded prescriptions
+  const hospitalContact = extractHospitalContact(prescriptions, userProfile);
+
+  const handleEmergencyCall = () => {
+    if (hospitalContact.hasNumber && hospitalContact.phone) {
+      if (typeof setToastMessage === 'function') {
+        setToastMessage(`📞 Direct dialing hospital: ${hospitalContact.hospitalName || 'Clinic'} (${hospitalContact.phone})...`);
+      }
+      directCallHospital(hospitalContact.phone);
+    }
+  };
+
+  useEffect(() => {
+    if (initialStep) {
+      setActiveStep(initialStep);
+    }
+  }, [initialStep]);
+
+  const handleDeletePrescription = (id) => {
+    const updated = prescriptions.filter(p => p.id !== id);
+    setPrescriptions(updated);
+    if (updated.length === 0) {
+      localStorage.removeItem('carebridge_portal_prescriptions');
+      localStorage.removeItem('carebridge_meds_checklist');
+      localStorage.removeItem('carebridge_advice_checklist');
+      localStorage.removeItem('carebridge_diet_checklist');
+      setShowAddAnotherRx(true);
+      if (typeof setToastMessage === 'function') {
+        setToastMessage('Prescription removed. Ready to upload a new prescription.');
+      }
+    } else {
+      localStorage.setItem('carebridge_portal_prescriptions', JSON.stringify(updated));
+      if (typeof setToastMessage === 'function') {
+        setToastMessage('Prescription removed.');
+      }
+    }
+  };
 
   // Filter for prescriptions tab
   const [prescriptionFilter, setPrescriptionFilter] = useState('all'); // 'all' | 'active' | 'refills'
@@ -293,11 +329,10 @@ export default function DashboardPortal({
   const sidebarItems = [
     { id: 'overview', icon: '📊', label: 'Recovery Overview', sub: 'Health status & tools' },
     { id: 'prescriptions', icon: '💊', label: '1. Prescriptions & Meds', sub: prescriptions.length > 0 ? `${prescriptions.length} Active Rx` : 'Upload once', badge: prescriptions.length > 0 ? `${prescriptions.length} Active` : null },
-    { id: 'reminders', icon: '⏰', label: '2. Dose Timetable', sub: 'Hourly alarms & chimes' },
-    { id: 'followup', icon: '📅', label: '3. Follow-up Visits', sub: 'Doctor checkups & dates', badge: appointments.length > 0 ? `${appointments.length} Scheduled` : null },
-    { id: 'recovery', icon: '📈', label: '4. Track Recovery', sub: 'Pain & vitals roadmap' },
-    { id: 'diet', icon: '🥗', label: '5. Diet & Nutrition', sub: 'Foods to eat & avoid' },
-    { id: 'confusion', icon: '⚠️', label: '6. Confusion Guard', sub: 'LASA drug safety' }
+    { id: 'followup', icon: '📅', label: '2. Follow-up Visits', sub: 'Doctor checkups & dates', badge: appointments.length > 0 ? `${appointments.length} Scheduled` : null },
+    { id: 'recovery', icon: '💊', label: '3. Track Medications', sub: 'Daily tablet tracker' },
+    { id: 'diet', icon: '🥗', label: '4. Diet & Nutrition', sub: 'Foods to eat & avoid' },
+    { id: 'confusion', icon: '⚠️', label: '5. Confusion Guard', sub: 'LASA drug safety' }
   ];
 
   const filteredPrescriptions = prescriptions.filter(rx => {
@@ -355,23 +390,29 @@ export default function DashboardPortal({
           <strong style={{ fontSize: '1rem', color: 'var(--navy)' }}>CareBridge AI</strong>
         </div>
 
-        <button
-          type="button"
-          onClick={openEmergencyModal}
-          style={{
-            background: '#ef4444',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '9999px',
-            padding: '6px 12px',
-            fontSize: '0.75rem',
-            fontWeight: 800,
-            cursor: 'pointer',
-            boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)'
-          }}
-        >
-          🚨 911
-        </button>
+        {hospitalContact.hasNumber && hospitalContact.phone && (
+          <button
+            type="button"
+            onClick={handleEmergencyCall}
+            style={{
+              background: '#dc2626',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '6px 12px',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+          >
+            <span>📞</span>
+            <span>Call Hospital ({hospitalContact.phone})</span>
+          </button>
+        )}
       </header>
 
       {/* ======================= SLEEK CLINICAL SIDEBAR ======================= */}
@@ -581,31 +622,34 @@ export default function DashboardPortal({
             <span>Profile &amp; Caregiver</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              openEmergencyModal();
-              setMobileMenuOpen(false);
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              background: '#ef4444',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '9999px',
-              padding: '8px 12px',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(239, 68, 68, 0.25)'
-            }}
-          >
-            <span>🚨</span>
-            <span>Emergency 911</span>
-          </button>
+          {hospitalContact.hasNumber && hospitalContact.phone && (
+            <button
+              type="button"
+              onClick={() => {
+                handleEmergencyCall();
+                setMobileMenuOpen(false);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                background: '#dc2626',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '10px 14px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>📞</span>
+              <span>Emergency Call: {hospitalContact.phone}</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -728,7 +772,7 @@ export default function DashboardPortal({
 
                 <button
                   type="button"
-                  onClick={() => setActiveStep('reminders')}
+                  onClick={() => setActiveStep('followup')}
                   style={{
                     background: '#ffffff',
                     color: '#334155',
@@ -744,8 +788,8 @@ export default function DashboardPortal({
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <span>⏰</span>
-                  <span>2. Dose Timetable &amp; Alarms</span>
+                  <span>📅</span>
+                  <span>2. Follow-Up Visits</span>
                 </button>
               </div>
             </div>
@@ -795,7 +839,7 @@ export default function DashboardPortal({
 
               {/* Metric 2: Next Dose */}
               <div 
-                onClick={() => setActiveStep('reminders')}
+                onClick={() => setActiveStep('recovery')}
                 style={{
                   background: '#ffffff',
                   border: '1px solid #e2e8f0',
@@ -1165,7 +1209,7 @@ export default function DashboardPortal({
                     padding: '3px 10px',
                     borderRadius: '9999px'
                   }}>
-                    Step 1 of 6
+                    Step 1 of 5
                   </span>
                   <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
                     {prescriptions.length === 0 || showAddAnotherRx
@@ -1179,7 +1223,28 @@ export default function DashboardPortal({
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddAnotherRx(true)}
+                    style={{
+                      background: (showAddAnotherRx || prescriptions.length === 0) ? '#4f46e5' : '#ffffff',
+                      color: (showAddAnotherRx || prescriptions.length === 0) ? '#ffffff' : '#4f46e5',
+                      border: '1.5px solid #4f46e5',
+                      borderRadius: '9999px',
+                      padding: '8px 16px',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>📤</span>
+                    <span>Upload Prescription</span>
+                  </button>
+
                   {prescriptions.length > 0 && showAddAnotherRx && (
                     <button
                       type="button"
@@ -1195,29 +1260,34 @@ export default function DashboardPortal({
                         cursor: 'pointer'
                       }}
                     >
-                      ← Back to Prescriptions ({prescriptions.length})
+                      ← View Prescriptions ({prescriptions.length})
                     </button>
                   )}
-                  {prescriptions.length > 0 && !showAddAnotherRx && (
+
+                  {prescriptions.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => setShowAddAnotherRx(true)}
+                      onClick={() => {
+                        setPrescriptions([]);
+                        localStorage.removeItem('carebridge_portal_prescriptions');
+                        localStorage.removeItem('carebridge_meds_checklist');
+                        localStorage.removeItem('carebridge_advice_checklist');
+                        localStorage.removeItem('carebridge_diet_checklist');
+                        setShowAddAnotherRx(true);
+                        setToastMessage('Cleared all prescriptions. Ready to upload a new one.');
+                      }}
                       style={{
-                        background: '#ffffff',
-                        color: '#4f46e5',
-                        border: '1.5px solid #c7d2fe',
+                        background: '#fff1f2',
+                        color: '#e11d48',
+                        border: '1px solid #fecdd3',
                         borderRadius: '9999px',
-                        padding: '8px 16px',
+                        padding: '8px 14px',
                         fontSize: '0.82rem',
                         fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
+                        cursor: 'pointer'
                       }}
                     >
-                      <span>➕</span>
-                      <span>Add Another Prescription</span>
+                      🗑️ Clear &amp; Upload Fresh
                     </button>
                   )}
                 </div>
@@ -1353,6 +1423,48 @@ export default function DashboardPortal({
                         <div style={{ fontSize: '0.825rem', color: '#111827', marginTop: '2px' }}>
                           Diagnosis / Indication: <strong>{rx.diagnosis}</strong> • Refill: <strong>{rx.refill}</strong>
                         </div>
+                        {Boolean(rx.hospitalPhone && String(rx.hospitalPhone).trim()) && (
+                          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{
+                              background: '#fef2f2',
+                              border: '1.5px solid #fecaca',
+                              color: '#991b1b',
+                              fontSize: '0.8rem',
+                              fontWeight: 800,
+                              padding: '3px 10px',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              🚨 Hospital Phone: <strong>{rx.hospitalPhone}</strong>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setToastMessage(`📞 Direct dialing ${rx.clinic || rx.hospitalName || 'hospital'} (${rx.hospitalPhone})...`);
+                                directCallHospital(rx.hospitalPhone);
+                              }}
+                              style={{
+                                background: '#dc2626',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '4px 12px',
+                                fontSize: '0.78rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                boxShadow: '0 2px 4px rgba(220, 38, 38, 0.25)'
+                              }}
+                            >
+                              <span>📞</span>
+                              <span>Direct Call Hospital</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Right top actions */}
@@ -1399,6 +1511,27 @@ export default function DashboardPortal({
                         >
                           <span>📄</span>
                           <span>Export / Print</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePrescription(rx.id)}
+                          style={{
+                            background: '#fff1f2',
+                            border: '1.5px solid #e11d48',
+                            color: '#e11d48',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '8px 14px',
+                            fontSize: '0.8rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <span>🗑️</span>
+                          <span>Remove</span>
                         </button>
                       </div>
                     </div>
@@ -1492,7 +1625,7 @@ export default function DashboardPortal({
                         onClick={() => {
                           playMedicalChime();
                           setToastMessage(`⏰ Medication alarms armed for ${rx.doctor}'s prescription!`);
-                          setActiveStep('reminders');
+                          setActiveStep('recovery');
                         }}
                         style={{
                           background: '#000000',
@@ -1509,7 +1642,7 @@ export default function DashboardPortal({
                         }}
                       >
                         <span>⏰</span>
-                        <span>Arm Dose Alarms (Step 2)</span>
+                        <span>Track Medications &amp; Alarms</span>
                       </button>
 
                       <button
@@ -1579,19 +1712,20 @@ export default function DashboardPortal({
                           cursor: 'pointer'
                         }}
                       >
-                        ➕ Add Another Rx
+                        📤 Upload Another Prescription
                       </button>
 
                       <button
                         type="button"
                         className="btn-hero-launch"
                         onClick={() => {
-                          playMedicalChime();
-                          setActiveStep('reminders');
+                          try { playMedicalChime(); } catch (_) {}
+                          setActiveStep('followup');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         style={{ padding: '10px 22px', fontSize: '0.85rem' }}
                       >
-                        <span>Proceed to Step 2: Dose Timetable</span>
+                        <span>Proceed to Step 2: Follow-Up Visits</span>
                         <span>→</span>
                       </button>
                     </div>
@@ -1599,97 +1733,6 @@ export default function DashboardPortal({
                 </>
               )}
 
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: SET REMINDERS & ALARMS */}
-        {activeStep === 'reminders' && (
-          <div>
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 'var(--radius-xl)',
-              padding: '2rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <span style={{
-                    background: '#eef2ff',
-                    color: '#4f46e5',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    padding: '3px 10px',
-                    borderRadius: '9999px'
-                  }}>
-                    Step 2 of 6
-                  </span>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    2. Daily Dose Timetable &amp; Audio Alarm Chimes
-                  </h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-                    Arm synthesized Web Audio alarm chimes for morning, afternoon, and evening doses. Check off completed doses.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="btn-hero-launch"
-                  onClick={() => {
-                    playMedicalChime();
-                    setActiveStep('followup');
-                  }}
-                  style={{ padding: '8px 18px', fontSize: '0.825rem' }}
-                >
-                  <span>Proceed to Step 3: Follow-Up Checkups</span>
-                  <span>→</span>
-                </button>
-              </div>
-
-              {/* Timeline Reminders View */}
-              <TimelineView setToastMessage={setToastMessage} />
-
-              {/* Step 2 Bottom Progression Bar */}
-              <div style={{
-                marginTop: '2rem',
-                borderTop: '1px solid #f1f5f9',
-                paddingTop: '1.25rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '1rem'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setActiveStep('prescriptions')}
-                  style={{
-                    background: '#f8fafc',
-                    color: '#64748b',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '8px 16px',
-                    fontSize: '0.825rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  ← Back to Step 1: Prescriptions
-                </button>
-                <button
-                  type="button"
-                  className="btn-hero-launch"
-                  onClick={() => {
-                    playMedicalChime();
-                    setActiveStep('followup');
-                  }}
-                  style={{ padding: '10px 22px', fontSize: '0.85rem' }}
-                >
-                  <span>Proceed to Step 3: Follow-Up Checkups</span>
-                  <span>→</span>
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -1714,10 +1757,10 @@ export default function DashboardPortal({
                     padding: '3px 10px',
                     borderRadius: '9999px'
                   }}>
-                    Step 3 of 6
+                    Step 2 of 5
                   </span>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    3. Upcoming Medical Follow-Ups &amp; Clinic Checkups
+                    2. Upcoming Medical Follow-Ups &amp; Clinic Checkups
                   </h2>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
                     Never miss a crucial postoperative appointment. Sync reminders with your phone's calendar (.ics).
@@ -1746,12 +1789,13 @@ export default function DashboardPortal({
                     type="button"
                     className="btn-hero-launch"
                     onClick={() => {
-                      playMedicalChime();
+                      try { playMedicalChime(); } catch (_) {}
                       setActiveStep('recovery');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     style={{ padding: '8px 18px', fontSize: '0.825rem' }}
                   >
-                    <span>Proceed to Step 4: Track Recovery</span>
+                    <span>Proceed to Step 3: Track Medications</span>
                     <span>→</span>
                   </button>
                 </div>
@@ -2020,7 +2064,10 @@ export default function DashboardPortal({
               }}>
                 <button
                   type="button"
-                  onClick={() => setActiveStep('reminders')}
+                  onClick={() => {
+                    setActiveStep('verify');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   style={{
                     background: '#f8fafc',
                     color: '#64748b',
@@ -2032,18 +2079,19 @@ export default function DashboardPortal({
                     cursor: 'pointer'
                   }}
                 >
-                  ← Back to Step 2: Dose Timetable
+                  ← Back to Step 1: Prescriptions
                 </button>
                 <button
                   type="button"
                   className="btn-hero-launch"
                   onClick={() => {
-                    playMedicalChime();
+                    try { playMedicalChime(); } catch (_) {}
                     setActiveStep('recovery');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{ padding: '10px 22px', fontSize: '0.85rem' }}
                 >
-                  <span>Proceed to Step 4: Track Recovery</span>
+                  <span>Proceed to Step 3: Track Medications</span>
                   <span>→</span>
                 </button>
               </div>
@@ -2051,7 +2099,7 @@ export default function DashboardPortal({
           </div>
         )}
 
-        {/* STEP 4: TRACK RECOVERY */}
+        {/* STEP 4: TRACK MEDICATIONS */}
         {activeStep === 'recovery' && (
           <div>
             <div style={{
@@ -2071,231 +2119,33 @@ export default function DashboardPortal({
                     padding: '3px 10px',
                     borderRadius: '9999px'
                   }}>
-                    Step 4 of 6
+                    Step 3 of 5
                   </span>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                    4. Daily Recovery Progress &amp; Symptom Tracker
+                    3. Track Daily Prescribed Medications
                   </h2>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-                    Log pain, temperature, blood pressure, and incision healing to spot complications early.
+                    Track confirmed medication tablets from your prescription, check off taken doses, and arm audio chime alarms.
                   </p>
                 </div>
 
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #bbf7d0',
-                  color: '#15803d',
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  fontWeight: 800,
-                  fontSize: '0.825rem'
-                }}>
-                  🌱 Recovery Vitals Monitoring Active
-                </div>
-              </div>
-
-              {/* Red-Flag Alert Warning */}
-              {(showFeverAlert || showPainAlert) && (
-                <div style={{
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#b91c1c',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '12px 16px',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  marginBottom: '1.5rem',
-                  lineHeight: 1.5
-                }}>
-                  🚨 <strong>CLINICAL ALERT:</strong> {showFeverAlert ? 'Temperature is above 100.4°F (Fever). ' : ''}{showPainAlert ? 'Severe pain reported (Score >= 8). ' : ''}Please contact your treating hospital immediately or call emergency dispatch.
-                </div>
-              )}
-
-              {/* Vitals Form */}
-              <form onSubmit={handleSaveVitals} style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: 'var(--radius-lg)',
-                padding: '1.5rem',
-                marginBottom: '1.5rem'
-              }}>
-                {/* Pain Score Slider */}
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--navy)' }}>
-                      Current Pain Score (0 = No Pain, 10 = Severe)
-                    </label>
-                    <span style={{
-                      fontSize: '0.85rem',
-                      fontWeight: 800,
-                      color: painLevel <= 3 ? '#6366f1' : painLevel <= 6 ? '#f59e0b' : '#ef4444',
-                      background: painLevel <= 3 ? '#dcfce7' : painLevel <= 6 ? '#fef3c7' : '#fee2e2',
-                      padding: '2px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      {painLevel} / 10 {painLevel <= 3 ? 'Mild' : painLevel <= 6 ? 'Moderate' : 'Severe'}
-                    </span>
-                  </div>
-                  <input 
-                    type="range"
-                    min="0"
-                    max="10"
-                    value={painLevel}
-                    onChange={(e) => setPainLevel(parseInt(e.target.value))}
-                    style={{ width: '100%', accentColor: '#4f46e5', cursor: 'pointer' }}
-                  />
-                </div>
-
-                {/* Temperature & BP */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
-                  <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                      Body Temperature (°F)
-                    </label>
-                    <input 
-                      type="number"
-                      step="0.1"
-                      className="auth-input"
-                      value={temperature}
-                      onChange={(e) => setTemperature(e.target.value)}
-                      style={{ borderColor: showFeverAlert ? '#ef4444' : '#cbd5e1' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                      Blood Pressure (mmHg)
-                    </label>
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                      <input 
-                        type="number"
-                        className="auth-input"
-                        placeholder="120"
-                        value={systolic}
-                        onChange={(e) => setSystolic(e.target.value)}
-                      />
-                      <span>/</span>
-                      <input 
-                        type="number"
-                        className="auth-input"
-                        placeholder="80"
-                        value={diastolic}
-                        onChange={(e) => setDiastolic(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobility & Wound status */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
-                  <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                      Energy &amp; Mobility
-                    </label>
-                    <select
-                      className="form-select"
-                      value={energyLevel}
-                      onChange={(e) => setEnergyLevel(parseInt(e.target.value))}
-                    >
-                      <option value={5}>⭐⭐⭐⭐⭐ Normal Activity</option>
-                      <option value={4}>⭐⭐⭐⭐ Good Walking</option>
-                      <option value={3}>⭐⭐⭐ Mild Fatigue / Resting</option>
-                      <option value={2}>⭐⭐ Restricted / Weakness</option>
-                      <option value={1}>⭐ Bedbound / Dizziness</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                      Incision / Wound Status
-                    </label>
-                    <select
-                      className="form-select"
-                      value={woundStatus}
-                      onChange={(e) => setWoundStatus(e.target.value)}
-                    >
-                      <option value="Clean & Healing">Clean &amp; Healing</option>
-                      <option value="Mild Discomfort / Swelling">Mild Swelling</option>
-                      <option value="Redness / Drainage (Warning)">⚠️ Redness / Drainage</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                    Notes / Symptoms to Report
-                  </label>
-                  <input 
-                    type="text"
-                    className="auth-input"
-                    placeholder="e.g. Mild pain around incision when getting out of bed"
-                    value={vitalsNotes}
-                    onChange={(e) => setVitalsNotes(e.target.value)}
-                  />
-                </div>
-
-                <button 
-                  type="submit" 
-                  className="btn-hero-launch" 
-                  style={{ width: '100%', justifyContent: 'center', padding: '10px' }}
+                <button
+                  type="button"
+                  className="btn-hero-launch"
+                  onClick={() => {
+                    try { playMedicalChime(); } catch (_) {}
+                    setActiveStep('diet');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ padding: '8px 18px', fontSize: '0.825rem' }}
                 >
-                  💾 Save Daily Recovery Log
+                  <span>Proceed to Step 4: Diet Planner</span>
+                  <span>→</span>
                 </button>
-              </form>
-
-              {/* Past Vitals Logs */}
-              <div>
-                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: 800, color: 'var(--navy)' }}>
-                  Recent Recovery Records ({recoveryLogs.length})
-                </h4>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {recoveryLogs.length === 0 ? (
-                    <div style={{
-                      padding: '1.5rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px dashed #cbd5e1',
-                      background: '#f8fafc',
-                      textAlign: 'center',
-                      color: '#64748b',
-                      fontSize: '0.85rem'
-                    }}>
-                      ⚪ No recovery vitals recorded yet. Fill out the form above to log your pain level, temperature, and blood pressure.
-                    </div>
-                  ) : (
-                    recoveryLogs.map((log, i) => (
-                      <div 
-                        key={i}
-                        style={{
-                          padding: '10px 14px',
-                          borderRadius: 'var(--radius-md)',
-                          border: `1px solid ${log.status.includes('Alert') ? '#fecaca' : '#e2e8f0'}`,
-                          background: log.status.includes('Alert') ? '#fef2f2' : '#ffffff',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          fontSize: '0.85rem'
-                        }}
-                      >
-                        <div>
-                          <strong>{log.date}</strong> — Pain: <strong>{log.painLevel}/10</strong> • Temp: <strong>{log.temperature}</strong> • BP: <strong>{log.bloodPressure}</strong>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            Incision: {log.woundStatus} {log.notes && `• "${log.notes}"`}
-                          </div>
-                        </div>
-
-                        <span style={{
-                          color: log.status.includes('Alert') ? '#dc2626' : '#15803d',
-                          fontWeight: 700,
-                          fontSize: '0.75rem'
-                        }}>
-                          {log.status}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
               </div>
+
+              {/* Medication Tracking Hub & Checklist */}
+              <TimelineView setToastMessage={setToastMessage} />
 
               {/* Step 4 Bottom Progression Bar */}
               <div style={{
@@ -2310,7 +2160,10 @@ export default function DashboardPortal({
               }}>
                 <button
                   type="button"
-                  onClick={() => setActiveStep('followup')}
+                  onClick={() => {
+                    setActiveStep('followup');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   style={{
                     background: '#f8fafc',
                     color: '#64748b',
@@ -2322,18 +2175,19 @@ export default function DashboardPortal({
                     cursor: 'pointer'
                   }}
                 >
-                  ← Back to Step 3: Follow-Up
+                  ← Back to Step 2: Follow-Up
                 </button>
                 <button
                   type="button"
                   className="btn-hero-launch"
                   onClick={() => {
-                    playMedicalChime();
+                    try { playMedicalChime(); } catch (_) {}
                     setActiveStep('diet');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{ padding: '10px 22px', fontSize: '0.85rem' }}
                 >
-                  <span>Proceed to Step 5: Diet &amp; Nutrition</span>
+                  <span>Proceed to Step 4: Diet Planner</span>
                   <span>→</span>
                 </button>
               </div>
@@ -2355,10 +2209,10 @@ export default function DashboardPortal({
                   padding: '3px 10px',
                   borderRadius: '9999px'
                 }}>
-                  Step 5 of 6
+                  Step 4 of 5
                 </span>
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                  5. Post-Discharge Diet &amp; Clinical Nutrition
+                  4. Post-Discharge Diet &amp; Clinical Nutrition
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
                   Tailored meal recommendations, foods that promote tissue healing, and items to strictly avoid with your medications.
@@ -2369,19 +2223,20 @@ export default function DashboardPortal({
                 type="button"
                 className="btn-hero-launch"
                 onClick={() => {
-                  playMedicalChime();
+                  try { playMedicalChime(); } catch (_) {}
                   setActiveStep('confusion');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 style={{ padding: '8px 18px', fontSize: '0.825rem' }}
               >
-                <span>Proceed to Step 6: Confusion Guard</span>
+                <span>Proceed to Step 5: Confusion Guard</span>
                 <span>→</span>
               </button>
             </div>
 
             <DietPlannerView />
 
-            {/* Step 5 Bottom Progression Bar */}
+            {/* Step 4 Bottom Progression Bar */}
             <div style={{
               marginTop: '2rem',
               borderTop: '1px solid #f1f5f9',
@@ -2394,7 +2249,10 @@ export default function DashboardPortal({
             }}>
               <button
                 type="button"
-                onClick={() => setActiveStep('recovery')}
+                onClick={() => {
+                  setActiveStep('recovery');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 style={{
                   background: '#f8fafc',
                   color: '#64748b',
@@ -2406,18 +2264,19 @@ export default function DashboardPortal({
                   cursor: 'pointer'
                 }}
               >
-                ← Back to Step 4: Track Recovery
+                ← Back to Step 3: Track Medications
               </button>
               <button
                 type="button"
                 className="btn-hero-launch"
                 onClick={() => {
-                  playMedicalChime();
+                  try { playMedicalChime(); } catch (_) {}
                   setActiveStep('confusion');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 style={{ padding: '10px 22px', fontSize: '0.85rem' }}
               >
-                <span>Proceed to Step 6: Confusion Guard</span>
+                <span>Proceed to Step 5: Confusion Guard</span>
                 <span>→</span>
               </button>
             </div>
@@ -2437,10 +2296,10 @@ export default function DashboardPortal({
                   padding: '3px 10px',
                   borderRadius: '9999px'
                 }}>
-                  Step 6 of 6
+                  Step 5 of 5
                 </span>
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)', margin: '6px 0 2px 0' }}>
-                  6. Medication Confusion Guard &amp; LASA Drug Safety
+                  5. Medication Confusion Guard &amp; LASA Drug Safety
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
                   Verify high-risk look-alike sound-alike (LASA) pharmaceutical drug confusions to prevent adverse events.
@@ -2464,7 +2323,7 @@ export default function DashboardPortal({
 
             <ConfusionGuardView />
 
-            {/* Step 6 Bottom Progression Bar */}
+            {/* Step 5 Bottom Progression Bar */}
             <div style={{
               marginTop: '2rem',
               borderTop: '1px solid #f1f5f9',
@@ -2489,7 +2348,7 @@ export default function DashboardPortal({
                   cursor: 'pointer'
                 }}
               >
-                ← Back to Step 5: Diet &amp; Nutrition
+                ← Back to Step 4: Diet &amp; Nutrition
               </button>
               <button
                 type="button"

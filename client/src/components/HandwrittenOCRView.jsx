@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { API_BASE_URL } from '../utils/apiConfig';
+import { extractPhoneFromText, saveHospitalContact } from '../utils/hospitalContact';
 
 export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPrescriptions, onNavigateToOverview }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -49,13 +50,25 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
           critical: Boolean(m.caution)
         }));
 
+        const extractedPhone = resData.data.hospitalPhone || 
+          extractPhoneFromText(resData.data.detectedClinic) || 
+          extractPhoneFromText(resData.data.normalizedDigitalText) || 
+          extractPhoneFromText((resData.data.rawHandwrittenLines || []).join(' '));
+        const hospitalName = resData.data.hospitalName || resData.data.detectedClinic || 'Outpatient Clinic';
+
+        if (extractedPhone) {
+          saveHospitalContact(extractedPhone, hospitalName);
+        }
+
         const newPrescription = {
           id: `rx_${Date.now()}`,
           title: "Doctor's Handwritten Prescription",
           doctor: resData.data.detectedDoctor || 'Attending Physician',
           clinic: resData.data.detectedClinic || 'Outpatient Clinic',
+          hospitalName: hospitalName,
+          hospitalPhone: extractedPhone || '',
           date: resData.data.prescriptionDate || new Date().toISOString().split('T')[0],
-          diagnosis: 'Physician Prescribed Treatment Course',
+          diagnosis: resData.data.detectedDisease || resData.data.diagnosis || 'Physician Prescribed Treatment Course',
           status: 'Active',
           refill: '1 Refill Remaining (30-day supply)',
           documentType: 'Handwritten Doctor Note (OCR & HTR)',
@@ -66,14 +79,20 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
           notes: resData.data.normalizedDigitalText || 'Transcribed from physician handwritten prescription.'
         };
 
-        const newChecklistMeds = medsList.map((m, idx) => ({
-          id: `chk_med_${Date.now()}_${idx}`,
-          title: `${m.name} ${m.dosage !== 'As directed' ? m.dosage : ''}`.trim(),
-          time: m.schedule?.toLowerCase().includes('night') || m.schedule?.toLowerCase().includes('evening') ? '08:00 PM' : '08:00 AM',
-          dose: m.dosage || '1 dose',
-          done: false,
-          alarmEnabled: true
-        }));
+        const newChecklistMeds = medsList.map((m, idx) => {
+          const drugTitle = `${m.name} ${m.dosage !== 'As directed' ? m.dosage : ''}`.trim();
+          return {
+            id: `chk_med_${Date.now()}_${idx}`,
+            title: drugTitle,
+            text: drugTitle,
+            time: m.schedule?.toLowerCase().includes('night') || m.schedule?.toLowerCase().includes('evening') ? '08:00 PM' : '08:00 AM',
+            dose: m.dosage || '1 dose',
+            schedule: m.schedule || '',
+            instructions: m.instructions || m.caution || '',
+            done: false,
+            alarmEnabled: true
+          };
+        });
 
         if (onSavePrescription) {
           onSavePrescription(newPrescription, null, newChecklistMeds);

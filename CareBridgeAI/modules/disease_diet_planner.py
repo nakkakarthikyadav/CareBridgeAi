@@ -126,7 +126,7 @@ def generate_disease_diet_plan(document_text: str, api_key: str = None) -> dict:
     key = api_key or os.getenv("GEMINI_API_KEY")
     if key and key.strip() and key != "your_gemini_api_key_here":
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={key.strip()}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key.strip()}"
             prompt = f"""You are the Clinical Nutritionist & Dietitian AI for CareBridge AI.
 Based on this medical document / prescription:
 \"\"\"{document_text}\"\"\"

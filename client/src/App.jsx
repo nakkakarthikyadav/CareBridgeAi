@@ -11,8 +11,11 @@ import DietPlannerView from './components/DietPlannerView';
 import WhyPatientsChooseUs from './components/WhyPatientsChooseUs';
 import ProfileModal from './components/ProfileModal';
 import EmergencyModal from './components/EmergencyModal';
+import MedicationAlertModal from './components/MedicationAlertModal';
 import Footer from './components/Footer';
 import DashboardPortal from './components/DashboardPortal';
+import { playMedicalChime, triggerBrowserNotification } from './utils/audioChime';
+import { getDueMedications, recordDoseFired } from './utils/medicationAlarmEngine';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('handwritten');
@@ -20,6 +23,7 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
+  const [activeDoseAlert, setActiveDoseAlert] = useState(null);
 
   // Default user state is NOT logged in (No hardcoded demo patient)
   const [userProfile, setUserProfile] = useState(() => {
@@ -68,7 +72,7 @@ export default function App() {
   const handleOpenWorkspace = (tabName) => {
     let mapped = tabName;
     if (tabName === 'handwritten') mapped = 'verify';
-    else if (tabName === 'timeline') mapped = 'reminders';
+    else if (tabName === 'timeline' || tabName === 'reminders') mapped = 'recovery';
     else if (tabName === 'document') mapped = 'upload';
     
     setDashboardInitialStep(mapped);
@@ -89,6 +93,95 @@ export default function App() {
     setCurrentView('landing');
     setDashboardInitialStep('overview');
     setToastMessage('Signed out successfully.');
+  };
+
+  // Background Medication Alarm Monitor (runs globally every 3 seconds across both starting page and dashboard)
+  useEffect(() => {
+    const checkScheduledDoses = () => {
+      try {
+        const saved = localStorage.getItem('carebridge_meds_checklist');
+        if (!saved) return;
+        const medsList = JSON.parse(saved);
+        if (!Array.isArray(medsList) || medsList.length === 0) return;
+
+        const dueMeds = getDueMedications(medsList, new Date());
+        if (dueMeds.length > 0) {
+          const dueItem = dueMeds[0];
+          recordDoseFired(dueItem.id, dueItem.dueTimeSlot || dueItem.time || '', new Date());
+
+          playMedicalChime();
+          const cleanDrug = (dueItem.title || dueItem.text || 'Prescribed Medication').split('—')[0].trim();
+          triggerBrowserNotification(
+            `⏰ Medication Due: ${cleanDrug}`,
+            `Scheduled dose: ${dueItem.dose || '1 dose'} at ${dueItem.time || 'now'}. Please take with water.`
+          );
+
+          setActiveDoseAlert(dueItem);
+          if (typeof setToastMessage === 'function') {
+            setToastMessage(`🔔 Time to take your scheduled dose: ${cleanDrug}!`);
+          }
+        }
+      } catch (err) {
+        console.warn('Medication alarm ticker error:', err);
+      }
+    };
+
+    checkScheduledDoses();
+    const interval = setInterval(checkScheduledDoses, 3000);
+
+    const handleCustomTestAlarm = (e) => {
+      if (e.detail) {
+        setActiveDoseAlert(e.detail);
+        playMedicalChime();
+      }
+    };
+    window.addEventListener('carebridge_test_alarm', handleCustomTestAlarm);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('carebridge_test_alarm', handleCustomTestAlarm);
+    };
+  }, []);
+
+  const handleMarkTakenFromAlert = (alertItem) => {
+    playMedicalChime();
+    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const cleanDrug = (alertItem.title || alertItem.text || 'Prescribed Medication').split('—')[0].trim();
+
+    try {
+      const saved = localStorage.getItem('carebridge_meds_checklist');
+      if (saved) {
+        const medsList = JSON.parse(saved);
+        const updated = medsList.map(m => m.id === alertItem.id ? { ...m, done: true } : m);
+        localStorage.setItem('carebridge_meds_checklist', JSON.stringify(updated));
+      }
+
+      const savedLogs = localStorage.getItem('carebridge_activity_logs');
+      const listLogs = savedLogs ? JSON.parse(savedLogs) : [];
+      const updatedLogs = [`Took dose: ${cleanDrug} at ${nowStr}`, ...listLogs.slice(0, 6)];
+      localStorage.setItem('carebridge_activity_logs', JSON.stringify(updatedLogs));
+
+      window.dispatchEvent(new Event('carebridge_meds_updated'));
+    } catch (e) {
+      console.error(e);
+    }
+
+    setActiveDoseAlert(null);
+    if (typeof setToastMessage === 'function') {
+      setToastMessage(`✅ Dose marked completed: ${cleanDrug}`);
+    }
+  };
+
+  const handleSnoozeFromAlert = (alertItem, minutes = 5) => {
+    setActiveDoseAlert(null);
+    const cleanDrug = (alertItem.title || alertItem.text || 'Prescribed Medication').split('—')[0].trim();
+    if (typeof setToastMessage === 'function') {
+      setToastMessage(`⏰ Snoozed ${cleanDrug} for ${minutes} minutes.`);
+    }
+    setTimeout(() => {
+      setActiveDoseAlert(alertItem);
+      playMedicalChime();
+    }, minutes * 60 * 1000);
   };
 
   // If viewing the patient recovery dashboard
@@ -148,7 +241,19 @@ export default function App() {
         <EmergencyModal 
           isOpen={isEmergencyOpen}
           onClose={() => setIsEmergencyOpen(false)}
+          userProfile={userProfile}
+          setToastMessage={setToastMessage}
         />
+
+        {/* Global In-App Medication Dose Alert Modal */}
+        {activeDoseAlert && (
+          <MedicationAlertModal
+            alertItem={activeDoseAlert}
+            onMarkTaken={handleMarkTakenFromAlert}
+            onSnooze={handleSnoozeFromAlert}
+            onClose={() => setActiveDoseAlert(null)}
+          />
+        )}
       </div>
     );
   }
@@ -229,7 +334,19 @@ export default function App() {
       <EmergencyModal 
         isOpen={isEmergencyOpen}
         onClose={() => setIsEmergencyOpen(false)}
+        userProfile={userProfile}
+        setToastMessage={setToastMessage}
       />
+
+      {/* Global In-App Medication Dose Alert Modal */}
+      {activeDoseAlert && (
+        <MedicationAlertModal
+          alertItem={activeDoseAlert}
+          onMarkTaken={handleMarkTakenFromAlert}
+          onSnooze={handleSnoozeFromAlert}
+          onClose={() => setActiveDoseAlert(null)}
+        />
+      )}
     </div>
   );
 }
