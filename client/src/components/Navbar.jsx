@@ -10,10 +10,22 @@ export default function Navbar({
   openEmergencyModal,
   setToastMessage,
   onOpenDashboard,
-  onSignOut
+  onSignOut,
+  theme = 'light',
+  setTheme
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    if (setTheme) {
+      setTheme(nextTheme);
+    }
+    if (setToastMessage) {
+      setToastMessage(nextTheme === 'dark' ? "🌙 Dark Mode activated" : "☀️ Day Mode activated");
+    }
+  };
   const [alertsEnabled, setAlertsEnabled] = useState(() => {
     try {
       const saved = localStorage.getItem('carebridge_in_app_alerts_enabled');
@@ -230,6 +242,20 @@ export default function Navbar({
             />
             <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>🔍</span>
           </div>
+
+          {/* Day / Dark Mode Toggle Button */}
+          <button
+            type="button"
+            className="btn-theme-toggle"
+            onClick={handleToggleTheme}
+            title={theme === 'dark' ? "Switch to Day Mode (Light)" : "Switch to Dark Mode"}
+            aria-label="Toggle dark and day mode"
+          >
+            <span className="theme-toggle-icon">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            <span className="desktop-only theme-toggle-text">
+              {theme === 'dark' ? 'Day' : 'Dark'}
+            </span>
+          </button>
 
           {/* In-App Alerts Bell Icon (Before Sign In key) */}
           <div className="nav-alerts-wrapper" style={{ position: 'relative' }}>
@@ -538,6 +564,35 @@ export default function Navbar({
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer">
+          {/* Day / Dark Mode Switcher Card in Mobile Drawer */}
+          <div className="mobile-drawer-theme-card">
+            <span style={{ fontSize: '0.825rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>🎨</span> Appearance:
+            </span>
+            <div className="mobile-theme-pills">
+              <button
+                type="button"
+                className={`mobile-theme-pill ${theme !== 'dark' ? 'active' : ''}`}
+                onClick={() => {
+                  if (setTheme) setTheme('light');
+                  if (setToastMessage) setToastMessage("☀️ Day Mode activated");
+                }}
+              >
+                ☀️ Day Mode
+              </button>
+              <button
+                type="button"
+                className={`mobile-theme-pill ${theme === 'dark' ? 'active' : ''}`}
+                onClick={() => {
+                  if (setTheme) setTheme('dark');
+                  if (setToastMessage) setToastMessage("🌙 Dark Mode activated");
+                }}
+              >
+                🌙 Dark Mode
+              </button>
+            </div>
+          </div>
+
           {/* Sign In CTA Banner at top of Mobile Menu if not logged in */}
           {!userProfile?.isLoggedIn && !userProfile?.name ? (
             <div style={{

@@ -60,6 +60,33 @@ export default function App() {
   // Dashboard initial step state
   const [dashboardInitialStep, setDashboardInitialStep] = useState('overview');
 
+  // Day Mode / Dark Mode theme state
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('carebridge_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch {}
+    return 'light';
+  });
+
+  // Keep theme synced with HTML attribute and body classes
+  useEffect(() => {
+    try {
+      localStorage.setItem('carebridge_theme', theme);
+      document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        document.body.classList.add('theme-dark');
+        document.body.classList.remove('theme-light');
+      } else {
+        document.body.classList.add('theme-light');
+        document.body.classList.remove('theme-dark');
+      }
+    } catch {}
+  }, [theme]);
+
   useEffect(() => {
     if (toastMessage) {
       const timer = setTimeout(() => {
@@ -227,6 +254,8 @@ export default function App() {
           setToastMessage={setToastMessage}
           onSignOut={handleSignOut}
           initialStep={dashboardInitialStep}
+          theme={theme}
+          setTheme={setTheme}
         />
 
         <ProfileModal 
@@ -259,7 +288,7 @@ export default function App() {
   }
 
   return (
-    <div className="carebridge-landing-page">
+    <div className={`carebridge-landing-page theme-${theme}`}>
       {/* 1. Main Navigation Bar */}
       <Navbar 
         activeTab={activeTab}
@@ -271,6 +300,8 @@ export default function App() {
         setToastMessage={setToastMessage}
         onOpenDashboard={() => setCurrentView('dashboard')}
         onSignOut={handleSignOut}
+        theme={theme}
+        setTheme={setTheme}
       />
 
       {/* Toast Notification Banner */}
