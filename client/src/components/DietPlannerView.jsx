@@ -398,22 +398,22 @@ export default function DietPlannerView() {
               </div>
             )}
 
-            {/* Foods to Emphasize & Avoid in 2 columns */}
-            <div className="diet-columns-grid" style={{ marginBottom: '1.5rem' }}>
+            {/* Foods to Emphasize & Avoid in 2 columns (Side-by-Side on all screens) */}
+            <div className="diet-columns-grid">
               {/* Emphasize */}
-              <div style={{ background: '#eef2ff', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid #c7d2fe' }}>
-                <h4 style={{ color: '#312e81', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="diet-column-card diet-column-emphasize">
+                <h4 className="diet-column-title" style={{ color: '#312e81' }}>
                   <span>🟢</span> Foods to Emphasize
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="diet-food-list">
                   {result.foodsToEmphasize && result.foodsToEmphasize.length > 0 ? (
                     result.foodsToEmphasize.map((f, i) => {
                       const title = typeof f === 'string' ? f.split(/[:\-–—]/)[0] : (f.food || f.name || f.title || 'Therapeutic Food');
                       const desc = typeof f === 'string' ? (f.includes(':') ? f.split(':').slice(1).join(':') : 'Supports recovery') : (f.benefit || f.reason || f.description || 'Supports recovery');
                       return (
-                        <div key={i} style={{ background: '#ffffff', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #d1fae5', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                          <strong style={{ color: '#4338ca', display: 'block', marginBottom: '2px' }}>{title}</strong>
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.5 }}>{desc}</div>
+                        <div key={i} className="diet-food-item diet-food-item-emphasize">
+                          <strong className="diet-food-title" style={{ color: '#4338ca' }}>{title}</strong>
+                          <div className="diet-food-desc">{desc}</div>
                         </div>
                       );
                     })
@@ -426,19 +426,19 @@ export default function DietPlannerView() {
               </div>
 
               {/* Avoid */}
-              <div style={{ background: '#fef2f2', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid #fecaca' }}>
-                <h4 style={{ color: '#991b1b', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="diet-column-card diet-column-avoid">
+                <h4 className="diet-column-title" style={{ color: '#991b1b' }}>
                   <span>🔴</span> Foods to Strictly Avoid
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="diet-food-list">
                   {result.foodsToStrictlyAvoid && result.foodsToStrictlyAvoid.length > 0 ? (
                     result.foodsToStrictlyAvoid.map((f, i) => {
                       const title = typeof f === 'string' ? f.split(/[:\-–—]/)[0] : (f.food || f.name || f.title || 'Restricted Item');
                       const desc = typeof f === 'string' ? (f.includes(':') ? f.split(':').slice(1).join(':') : 'Interferes with recovery') : (f.reason || f.benefit || f.description || 'Interferes with recovery');
                       return (
-                        <div key={i} style={{ background: '#ffffff', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #fee2e2', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                          <strong style={{ color: '#b91c1c', display: 'block', marginBottom: '2px' }}>{title}</strong>
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.5 }}>{desc}</div>
+                        <div key={i} className="diet-food-item diet-food-item-avoid">
+                          <strong className="diet-food-title" style={{ color: '#b91c1c' }}>{title}</strong>
+                          <div className="diet-food-desc">{desc}</div>
                         </div>
                       );
                     })
@@ -453,26 +453,26 @@ export default function DietPlannerView() {
 
             {/* Sample Meal Plan */}
             {result.sampleMealPlan && (
-              <div style={{ background: '#ffffff', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ background: '#ffffff', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', marginBottom: '1.5rem' }}>
                 <h4 style={{ fontWeight: 800, color: 'var(--dark-indigo)', marginBottom: '1rem' }}>
                   🍽️ Sample Daily Recovery Menu
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 'var(--radius-md)' }}>
+                <div className="diet-sample-meal-grid">
+                  <div className="diet-sample-meal-card">
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Breakfast</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.breakfast}</p>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.breakfast}</p>
                   </div>
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 'var(--radius-md)' }}>
+                  <div className="diet-sample-meal-card">
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Lunch</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.lunch}</p>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.lunch}</p>
                   </div>
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 'var(--radius-md)' }}>
+                  <div className="diet-sample-meal-card">
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Snack</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.eveningSnack || result.sampleMealPlan.midMorningSnack || 'Herbal tea with soaked nuts'}</p>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.eveningSnack || result.sampleMealPlan.midMorningSnack || 'Herbal tea with soaked nuts'}</p>
                   </div>
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: 'var(--radius-md)' }}>
+                  <div className="diet-sample-meal-card">
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Dinner</span>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.dinner}</p>
+                    <p style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: '4px', margin: 0 }}>{result.sampleMealPlan.dinner}</p>
                   </div>
                 </div>
               </div>

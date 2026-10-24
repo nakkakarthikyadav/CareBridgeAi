@@ -181,9 +181,85 @@
 
 .diet-columns-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.5rem;
   margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.diet-column-card {
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.diet-column-emphasize {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+.diet-column-avoid {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.diet-column-title {
+  font-weight: 800;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diet-food-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.diet-food-item {
+  background: #ffffff;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  min-width: 0;
+  box-sizing: border-box;
+  word-break: break-word;
+}
+
+.diet-food-item-emphasize {
+  border: 1px solid #d1fae5;
+}
+
+.diet-food-item-avoid {
+  border: 1px solid #fee2e2;
+}
+
+.diet-food-title {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 700;
+}
+
+.diet-food-desc {
+  font-size: 0.85rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.diet-sample-meal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.diet-sample-meal-card {
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .search-input-group {
@@ -1756,16 +1832,83 @@ body {
     width: 100% !important;
   }
 
+  /* Diet Planner: Side-by-Side on Mobile */
   .diet-inputs-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
     width: 100% !important;
   }
 
   .diet-columns-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
     width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .diet-column-card {
+    padding: 0.75rem 0.5rem !important;
+    border-radius: 12px !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .diet-column-title {
+    font-size: 0.8rem !important;
+    margin-bottom: 0.5rem !important;
+    gap: 4px !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+  }
+
+  .diet-column-title span {
+    font-size: 0.85rem !important;
+  }
+
+  .diet-food-list {
+    gap: 0.45rem !important;
+  }
+
+  .diet-food-item {
+    padding: 8px 7px !important;
+    border-radius: 8px !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .diet-food-title {
+    font-size: 0.75rem !important;
+    line-height: 1.25 !important;
+    margin-bottom: 2px !important;
+    word-break: break-word !important;
+  }
+
+  .diet-food-desc {
+    font-size: 0.68rem !important;
+    line-height: 1.35 !important;
+    color: #475569 !important;
+    word-break: break-word !important;
+  }
+
+  .diet-sample-meal-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  .diet-sample-meal-card {
+    padding: 8px !important;
+  }
+
+  .diet-sample-meal-card span {
+    font-size: 0.7rem !important;
+  }
+
+  .diet-sample-meal-card p {
+    font-size: 0.76rem !important;
+    line-height: 1.3 !important;
   }
 
   .search-input-group {
@@ -1858,6 +2001,25 @@ body {
     min-width: 34px !important;
     height: 34px !important;
     padding: 4px 6px !important;
+  }
+  .diet-columns-grid {
+    gap: 0.35rem !important;
+  }
+  .diet-column-card {
+    padding: 0.6rem 0.35rem !important;
+  }
+  .diet-column-title {
+    font-size: 0.74rem !important;
+  }
+  .diet-food-item {
+    padding: 6px 5px !important;
+  }
+  .diet-food-title {
+    font-size: 0.72rem !important;
+  }
+  .diet-food-desc {
+    font-size: 0.64rem !important;
+    line-height: 1.3 !important;
   }
 }
 
