@@ -1238,9 +1238,9 @@ export default function DashboardPortal({
                     type="button"
                     onClick={() => setShowAddAnotherRx(true)}
                     style={{
-                      background: (showAddAnotherRx || prescriptions.length === 0) ? '#4f46e5' : '#ffffff',
-                      color: (showAddAnotherRx || prescriptions.length === 0) ? '#ffffff' : '#4f46e5',
-                      border: '1.5px solid #4f46e5',
+                      background: (showAddAnotherRx || prescriptions.length === 0) ? '#4f46e5' : 'var(--bg-card, #ffffff)',
+                      color: (showAddAnotherRx || prescriptions.length === 0) ? '#ffffff' : 'var(--primary, #4f46e5)',
+                      border: '1.5px solid var(--primary, #4f46e5)',
                       borderRadius: '9999px',
                       padding: '8px 16px',
                       fontSize: '0.82rem',
@@ -1260,9 +1260,9 @@ export default function DashboardPortal({
                       type="button"
                       onClick={() => setShowAddAnotherRx(false)}
                       style={{
-                        background: '#f8fafc',
-                        color: '#475569',
-                        border: '1px solid #cbd5e1',
+                        background: 'var(--bg-subtle, #f8fafc)',
+                        color: 'var(--text-main, #475569)',
+                        border: '1px solid var(--border-light, #cbd5e1)',
                         borderRadius: '9999px',
                         padding: '8px 16px',
                         fontSize: '0.82rem',
@@ -2055,7 +2055,7 @@ export default function DashboardPortal({
 
         {/* STEP 5: DIET & NUTRITION TAB */}
         {activeStep === 'diet' && (
-          <div className="portal-step-card">
+          <div className="portal-step-card portal-step-diet">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <span className="portal-step-badge">
@@ -2089,7 +2089,7 @@ export default function DashboardPortal({
             {/* Step 4 Bottom Progression Bar */}
             <div style={{
               marginTop: '2rem',
-              borderTop: '1px solid #f1f5f9',
+              borderTop: '1px solid var(--border-light, #e2e8f0)',
               paddingTop: '1.25rem',
               display: 'flex',
               justifyContent: 'space-between',
@@ -2099,19 +2099,10 @@ export default function DashboardPortal({
             }}>
               <button
                 type="button"
+                className="portal-nav-btn-back"
                 onClick={() => {
                   setActiveStep('recovery');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                style={{
-                  background: '#f8fafc',
-                  color: '#64748b',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '8px 16px',
-                  fontSize: '0.825rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
                 }}
               >
                 ← Back to Step 3: Track Medications
@@ -2135,7 +2126,7 @@ export default function DashboardPortal({
 
         {/* STEP 6: CONFUSION SAFETY GUARD TAB */}
         {activeStep === 'confusion' && (
-          <div className="portal-step-card">
+          <div className="portal-step-card portal-step-confusion">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <span className="portal-step-badge">
@@ -2169,7 +2160,7 @@ export default function DashboardPortal({
             {/* Step 5 Bottom Progression Bar */}
             <div style={{
               marginTop: '2rem',
-              borderTop: '1px solid #f1f5f9',
+              borderTop: '1px solid var(--border-light, #e2e8f0)',
               paddingTop: '1.25rem',
               display: 'flex',
               justifyContent: 'space-between',
@@ -2179,16 +2170,10 @@ export default function DashboardPortal({
             }}>
               <button
                 type="button"
-                onClick={() => setActiveStep('diet')}
-                style={{
-                  background: '#f8fafc',
-                  color: '#64748b',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '8px 16px',
-                  fontSize: '0.825rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
+                className="portal-nav-btn-back"
+                onClick={() => {
+                  setActiveStep('diet');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               >
                 ← Back to Step 4: Diet &amp; Nutrition

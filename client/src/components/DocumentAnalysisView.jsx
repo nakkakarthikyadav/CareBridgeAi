@@ -248,22 +248,14 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
   };
 
   return (
-    <div style={{ background: 'var(--bg-card, #ffffff)', borderRadius: '16px' }}>
+    <div className="document-analysis-container">
       {/* Module Title & Introduction */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-          <span style={{
-            background: '#eef2ff',
-            color: '#4f46e5',
-            fontSize: '0.75rem',
-            fontWeight: 800,
-            padding: '3px 12px',
-            borderRadius: '9999px',
-            border: '1px solid #c7d2fe'
-          }}>
+          <span className="module-header-badge">
             Vision OCR &amp; Medical Translation
           </span>
-          <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>
             Automated extraction of medicines, doses &amp; schedules
           </span>
         </div>
@@ -276,35 +268,11 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
       </div>
 
       {/* Mode Selection Tabs with Vibrant Clinical Palette */}
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        padding: '6px',
-        background: '#f1f5f9',
-        borderRadius: '12px',
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap'
-      }}>
+      <div className="ocr-mode-tab-bar">
         <button
           type="button"
           onClick={() => setActiveTab('upload')}
-          style={{
-            flex: '1 1 200px',
-            padding: '10px 16px',
-            borderRadius: '9px',
-            border: activeTab === 'upload' ? '1.5px solid #4f46e5' : '1px solid transparent',
-            background: activeTab === 'upload' ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'transparent',
-            color: activeTab === 'upload' ? '#ffffff' : '#64748b',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease',
-            boxShadow: activeTab === 'upload' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none'
-          }}
+          className={`ocr-mode-tab-btn ${activeTab === 'upload' ? 'active' : ''}`}
         >
           <span style={{ fontSize: '1.1rem' }}>📤</span>
           <span>Upload File (Photo or PDF)</span>
@@ -313,23 +281,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
         <button
           type="button"
           onClick={() => setActiveTab('paste')}
-          style={{
-            flex: '1 1 200px',
-            padding: '10px 16px',
-            borderRadius: '9px',
-            border: activeTab === 'paste' ? '1.5px solid #4f46e5' : '1px solid transparent',
-            background: activeTab === 'paste' ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'transparent',
-            color: activeTab === 'paste' ? '#ffffff' : '#64748b',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease',
-            boxShadow: activeTab === 'paste' ? '0 2px 8px rgba(79, 70, 229, 0.28)' : 'none'
-          }}
+          className={`ocr-mode-tab-btn ${activeTab === 'paste' ? 'active' : ''}`}
         >
           <span style={{ fontSize: '1.1rem' }}>✍️</span>
           <span>Paste Medical Notes / Text</span>
@@ -345,16 +297,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current && fileInputRef.current.click()}
-            style={{
-              border: isDragOver ? '2.5px dashed #4f46e5' : '2px dashed #c7d2fe',
-              background: isDragOver ? '#eef2ff' : '#f8faff',
-              borderRadius: '16px',
-              padding: '2.5rem 1.5rem',
-              textAlign: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              position: 'relative'
-            }}
+            className={`ocr-file-dropzone ${isDragOver ? 'drag-over' : ''}`}
           >
             {/* Hidden Inputs */}
             <input
@@ -375,26 +318,14 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
 
             {!selectedFile ? (
               <div>
-                <div style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  background: '#eef2ff',
-                  color: '#4f46e5',
-                  fontSize: '1.8rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 1rem auto',
-                  border: '1.5px solid #c7d2fe'
-                }}>
+                <div className="ocr-dropzone-icon">
                   📄
                 </div>
 
-                <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--navy, #0f172a)', margin: '0 0 6px 0' }}>
+                <h4 className="ocr-dropzone-title">
                   Click to Browse or Drag &amp; Drop Prescription Here
                 </h4>
-                <p style={{ fontSize: '0.875rem', color: '#64748b', maxWidth: '520px', margin: '0 auto 1.5rem auto' }}>
+                <p className="ocr-dropzone-sub">
                   Upload a photo of handwritten doctor cursive, smartphone snapshot of prescription, or digital hospital PDF summary.
                 </p>
 
@@ -554,53 +485,21 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             placeholder="Paste clinical discharge summary, medication instructions, physician handwritten notes, or pharmacy labels here..."
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '1rem',
-              borderRadius: '12px',
-              border: '1.5px solid #cbd5e1',
-              fontSize: '0.875rem',
-              color: '#0f172a',
-              background: '#ffffff',
-              fontFamily: 'inherit',
-              lineHeight: 1.5,
-              resize: 'vertical',
-              boxSizing: 'border-box',
-              outline: 'none'
-            }}
+            className="ocr-paste-textarea form-textarea"
           />
         </div>
       )}
 
       {/* Control Bar: Document Type & Primary Analyze Button */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        padding: '1.25rem',
-        background: '#f8fafc',
-        borderRadius: '14px',
-        border: '1.5px solid #e2e8f0'
-      }}>
+      <div className="ocr-control-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#334155' }}>
+          <span className="ocr-control-label">
             Document Classification:
           </span>
           <select
             value={docType}
             onChange={(e) => setDocType(e.target.value)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              border: '1.5px solid #cbd5e1',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              color: '#1e293b',
-              background: '#ffffff',
-              cursor: 'pointer'
-            }}
+            className="ocr-control-select form-select"
           >
             <option value="Discharge Summary">Hospital Discharge Summary</option>
             <option value="Handwritten Prescription">Handwritten Doctor Prescription</option>
@@ -769,24 +668,15 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
             gap: '1rem',
             marginBottom: '1.75rem'
           }}>
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-            }}>
+            <div className="ocr-dist-card">
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary, #4f46e5)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Option 1 • Medical Records
                 </span>
                 <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
                   Prescriptions &amp; Medications
                 </h5>
-                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
+                <p className="ocr-dist-desc">
                   {result.medications?.length || 0} active medications parsed with dosages and schedule instructions.
                 </p>
               </div>
@@ -809,16 +699,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
               </button>
             </div>
 
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-            }}>
+            <div className="ocr-dist-card">
               <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Option 2 • Clinic Checkups
@@ -826,7 +707,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
                   Follow-Up Visits
                 </h5>
-                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
+                <p className="ocr-dist-desc">
                   {result.followUpAppointment ? `Appointment date: ${result.followUpAppointment}.` : 'Postoperative doctor visits and calendar reminders.'}
                 </p>
               </div>
@@ -835,9 +716,9 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 onClick={() => onNavigateToStep ? onNavigateToStep('followup') : onNavigateToPrescriptions()}
                 style={{
                   marginTop: '1rem',
-                  background: '#f0fdf4',
-                  color: '#16a34a',
-                  border: '1px solid #bbf7d0',
+                  background: 'var(--success-light, #f0fdf4)',
+                  color: 'var(--success, #16a34a)',
+                  border: '1px solid var(--border-light, #bbf7d0)',
                   borderRadius: '6px',
                   padding: '8px 14px',
                   fontSize: '0.8rem',
@@ -849,16 +730,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
               </button>
             </div>
 
-            <div style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-            }}>
+            <div className="ocr-dist-card">
               <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Option 3 • Daily Medication Tracking
@@ -866,7 +738,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 <h5 style={{ margin: '6px 0 4px 0', fontSize: '1rem', fontWeight: 800, color: 'var(--navy)' }}>
                   Track Prescribed Medications
                 </h5>
-                <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.4 }}>
+                <p className="ocr-dist-desc">
                   Daily medication checklist, audio alarm chimes, and live adherence tracker.
                 </p>
               </div>
@@ -875,9 +747,9 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 onClick={() => onNavigateToStep ? onNavigateToStep('recovery') : onNavigateToPrescriptions()}
                 style={{
                   marginTop: '1rem',
-                  background: '#eef2ff',
-                  color: '#4f46e5',
-                  border: '1px solid #c7d2fe',
+                  background: 'var(--primary-light, #eef2ff)',
+                  color: 'var(--primary, #4f46e5)',
+                  border: '1px solid var(--border-light, #c7d2fe)',
                   borderRadius: '6px',
                   padding: '8px 14px',
                   fontSize: '0.8rem',
@@ -891,18 +763,11 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
           </div>
 
           {/* Plain-Language Clinical Summary Box */}
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '1.5rem',
-            marginBottom: '1.5rem',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
-          }}>
+          <div className="ocr-summary-card">
             <h4 style={{ color: 'var(--navy)', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>
               Plain-Language Clinical Summary
             </h4>
-            <p style={{ fontSize: '0.925rem', color: '#334155', lineHeight: 1.6, margin: 0 }}>
+            <p className="ocr-summary-text">
               {result.summary || result.rawText}
             </p>
 
@@ -911,15 +776,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 {result.keyDiagnoses.map((diag, i) => (
                   <span
                     key={i}
-                    style={{
-                      background: '#eef2ff',
-                      color: '#4f46e5',
-                      padding: '4px 12px',
-                      borderRadius: '9999px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      border: '1px solid #c7d2fe'
-                    }}
+                    className="ocr-diag-pill"
                   >
                     ✓ {diag}
                   </span>
@@ -941,38 +798,23 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
                 {result.medications.map((med, idx) => (
                   <div
                     key={idx}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '1.25rem',
-                      background: '#ffffff',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                    }}
+                    className="ocr-med-card"
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '0.5rem' }}>
                       <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--navy)' }}>
                         {med.name}
                       </div>
-                      <span style={{
-                        background: '#eef2ff',
-                        color: '#4f46e5',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: '9999px',
-                        border: '1px solid #c7d2fe',
-                        whiteSpace: 'nowrap'
-                      }}>
+                      <span className="ocr-med-schedule-pill">
                         {med.schedule}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '0.85rem', color: '#334155', marginBottom: '0.5rem' }}>
+                    <div className="ocr-med-purpose">
                       <strong>Purpose:</strong> {med.purpose}
                     </div>
 
                     {med.instructions && (
-                      <div style={{ fontSize: '0.825rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                      <div className="ocr-med-instructions">
                         <strong>Instructions:</strong> {med.instructions}
                       </div>
                     )}

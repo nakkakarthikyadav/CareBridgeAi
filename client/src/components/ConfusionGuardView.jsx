@@ -46,12 +46,12 @@ export default function ConfusionGuardView() {
     }
   };
 
-  const getRiskColor = (risk) => {
+  const getRiskClass = (risk) => {
     switch ((risk || '').toLowerCase()) {
-      case 'critical': return { bg: '#fef2f2', border: '#f87171', text: '#b91c1c' };
-      case 'high': return { bg: '#fff7ed', border: '#fb923c', text: '#c2410c' };
-      case 'moderate': return { bg: '#fffbeb', border: '#fcd34d', text: '#b45309' };
-      default: return { bg: '#eef2ff', border: '#6ee7b7', text: '#4338ca' };
+      case 'critical': return 'confusion-risk-critical';
+      case 'high': return 'confusion-risk-high';
+      case 'moderate': return 'confusion-risk-moderate';
+      default: return 'confusion-risk-low';
     }
   };
 
@@ -92,19 +92,10 @@ export default function ConfusionGuardView() {
             <button
               key={idx}
               type="button"
+              className="btn-quick-sample-chip"
               onClick={() => {
                 setQuery(s);
                 handleCheck(s);
-              }}
-              style={{
-                background: 'var(--bg-subtle)',
-                border: '1px solid var(--border-light)',
-                borderRadius: '9999px',
-                padding: '4px 12px',
-                fontSize: '0.775rem',
-                fontWeight: 600,
-                color: 'var(--text-main)',
-                cursor: 'pointer'
               }}
             >
               {s}
@@ -122,19 +113,10 @@ export default function ConfusionGuardView() {
           <div style={{ marginTop: '2rem', borderTop: '2px solid var(--border-light)', paddingTop: '2rem' }}>
             {/* Risk Badge */}
             {result.riskLevel && (
-              <div style={{
-                ...getRiskColor(result.riskLevel),
-                padding: '1rem 1.5rem',
-                borderRadius: 'var(--radius-lg)',
-                border: `2px solid ${getRiskColor(result.riskLevel).border}`,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem'
-              }}>
+              <div className={`confusion-risk-banner ${getRiskClass(result.riskLevel)}`}>
                 <div>
                   <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 800 }}>Assessed Risk Severity</span>
-                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800 }}>{result.riskLevel} Clinical Confusion Risk</h3>
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '4px 0 0 0' }}>{result.riskLevel} Clinical Confusion Risk</h3>
                 </div>
                 <div style={{ fontSize: '2rem' }}>
                   {result.riskLevel === 'Critical' || result.riskLevel === 'High' ? '🚨' : '🛡️'}
@@ -144,27 +126,27 @@ export default function ConfusionGuardView() {
 
             {/* Alert & Guidance */}
             {result.safetyAlert && (
-              <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', marginBottom: '1.5rem' }}>
-                <h4 style={{ color: 'var(--dark-indigo)', fontWeight: 800, marginBottom: '0.5rem' }}>
+              <div className="confusion-analysis-card">
+                <h4 className="confusion-analysis-title">
                   ⚠️ Clinical Safety Analysis
                 </h4>
-                <p style={{ lineHeight: 1.6, color: 'var(--text-main)' }}>{result.safetyAlert}</p>
+                <p className="confusion-analysis-text">{result.safetyAlert}</p>
               </div>
             )}
 
             {/* Look-Alike Breakdown */}
             {result.lookAlikeDrugs && result.lookAlikeDrugs.length > 0 && (
               <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ fontWeight: 800, color: 'var(--dark-indigo)', marginBottom: '1rem' }}>
+                <h4 className="confusion-section-heading">
                   🔄 Commonly Confused Medications &amp; Critical Distinctions
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
                   {result.lookAlikeDrugs.map((item, i) => (
-                    <div key={i} style={{ border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1.25rem', background: '#ffffff', boxShadow: 'var(--shadow-sm)' }}>
-                      <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.05rem', marginBottom: '0.5rem' }}>
+                    <div key={i} className="confusion-drug-card">
+                      <div className="confusion-drug-name">
                         {item.name}
                       </div>
-                      <p style={{ fontSize: '0.875rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
+                      <p className="confusion-drug-distinction">
                         {item.distinction}
                       </p>
                     </div>
@@ -175,21 +157,21 @@ export default function ConfusionGuardView() {
 
             {/* Actionable guidance */}
             {result.actionableGuidance && (
-              <div style={{ background: 'var(--primary-light)', padding: '1.25rem 1.5rem', borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem' }}>
-                <strong style={{ color: 'var(--primary)', display: 'block', marginBottom: '0.25rem' }}>
+              <div className="confusion-action-card">
+                <strong className="confusion-action-title">
                   📌 What You Must Check on the Box / Bottle Right Now:
                 </strong>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>{result.actionableGuidance}</p>
+                <p className="confusion-action-text">{result.actionableGuidance}</p>
               </div>
             )}
 
             {/* Questions for pharmacist */}
             {result.questionsToConfirmWithPharmacist && (
-              <div style={{ padding: '1rem', background: '#f1f5f9', borderRadius: 'var(--radius-md)' }}>
-                <strong style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>
+              <div className="confusion-pharmacist-card">
+                <strong className="confusion-pharmacist-title">
                   💬 Double-check with your pharmacist:
                 </strong>
-                <ul style={{ paddingLeft: '1.25rem', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                <ul className="confusion-pharmacist-list">
                   {result.questionsToConfirmWithPharmacist.map((q, i) => (
                     <li key={i}>{q}</li>
                   ))}

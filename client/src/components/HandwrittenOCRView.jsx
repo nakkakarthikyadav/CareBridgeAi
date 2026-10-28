@@ -144,14 +144,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
                   setImagePreview(null);
                   setResult(null);
                 }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#dc2626',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  cursor: 'pointer'
-                }}
+                className="handwritten-clear-btn"
               >
                 ✕ Clear
               </button>
@@ -159,15 +152,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
           </div>
 
           <div 
-            style={{
-              border: '2px dashed #cbd5e1',
-              borderRadius: 'var(--radius-lg)',
-              overflow: 'hidden',
-              background: '#f8fafc',
-              textAlign: 'center',
-              position: 'relative',
-              cursor: 'pointer'
-            }}
+            className="handwritten-dropzone-box"
             onClick={() => document.getElementById('handwritingFileInput').click()}
           >
             {imagePreview ? (
@@ -180,7 +165,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
               <div style={{ padding: '3rem 1.5rem' }}>
                 <span style={{ fontSize: '3rem' }}>✍️</span>
                 <p style={{ fontWeight: 700, marginTop: '0.5rem' }}>Click or drop doctor's prescription here</p>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Supports messy handwriting, blue/black ballpoint ink</span>
+                <span className="handwritten-dropzone-sub">Supports messy handwriting, blue/black ballpoint ink</span>
               </div>
             )}
           </div>
@@ -203,7 +188,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
           </button>
 
           {/* Model details badge */}
-          <div style={{ marginTop: '1rem', background: '#eef2ff', padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: '0.775rem', color: '#4338ca' }}>
+          <div className="handwritten-pipeline-badge">
             <strong>HTR Pipeline:</strong> Adaptive Binarization → Word Segmentation → CRNN Character Recognition → Medical Lexicon Post-Processing.
           </div>
         </div>
@@ -217,7 +202,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
           )}
 
           {!result && !loading && (
-            <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '3rem 2rem', textAlign: 'center' }}>
+            <div className="handwritten-placeholder-card">
               <span style={{ fontSize: '2.5rem' }}>📝</span>
               <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--navy)', marginTop: '0.75rem' }}>
                 Automated Handwriting Transcription Ready
@@ -236,7 +221,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
           )}
 
           {loading && (
-            <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '3rem 2rem', textAlign: 'center' }}>
+            <div className="handwritten-placeholder-card">
               <div style={{ fontSize: '2.5rem', animation: 'spin 1.5s infinite linear' }}>⏳</div>
               <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--navy)', marginTop: '1rem' }}>
                 Identifying Word Segments &amp; Cursive Handwriting...
@@ -248,27 +233,16 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
           )}
 
           {result && (
-            <div style={{ background: '#ffffff', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '2rem', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="handwritten-result-card">
               {/* Auto-save notification banner with quick navigation */}
-              <div style={{
-                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-                border: '1.5px solid #818cf8',
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '0.75rem'
-              }}>
+              <div className="handwritten-success-banner">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '1.4rem' }}>🎉</span>
                   <div>
-                    <strong style={{ color: '#1e1b4b', fontSize: '0.98rem', display: 'block' }}>
+                    <strong className="handwritten-banner-title">
                       Prescription &amp; Medications Successfully Activated!
                     </strong>
-                    <span style={{ color: '#4338ca', fontSize: '0.8rem' }}>
+                    <span className="handwritten-banner-sub">
                       All extracted medications and instructions have been synced with your Patient Portal.
                     </span>
                   </div>
@@ -301,16 +275,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
                     <button
                       type="button"
                       onClick={onNavigateToOverview}
-                      style={{
-                        background: '#ffffff',
-                        color: '#4338ca',
-                        border: '1px solid #c7d2fe',
-                        borderRadius: '8px',
-                        padding: '8px 14px',
-                        fontSize: '0.825rem',
-                        fontWeight: 700,
-                        cursor: 'pointer'
-                      }}
+                      className="handwritten-overview-btn"
                     >
                       <span>🏠</span>
                       <span>Overview</span>
@@ -347,7 +312,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                   Normal Typed Prescription:
                 </span>
-                <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1rem 1.25rem', marginTop: '6px', fontSize: '0.95rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--navy)' }}>
+                <div className="handwritten-typed-box">
                   {result.normalizedDigitalText || (result.rawHandwrittenLines ? result.rawHandwrittenLines.join('\n') : result.rawText)}
                 </div>
               </div>
@@ -360,13 +325,13 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {result.medicationsList.map((m, idx) => (
-                      <div key={idx} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderLeft: '4px solid #4f46e5', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div key={idx} className="handwritten-med-item">
                         <div>
                           <strong style={{ color: 'var(--navy)', fontSize: '0.95rem' }}>{m.drugName}</strong>
                           <span style={{ marginLeft: '8px', fontSize: '0.8rem', background: '#eef2ff', color: '#4f46e5', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700 }}>
                             {m.dosage}
                           </span>
-                          <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                             {m.frequency} • {m.instructions}
                           </div>
                         </div>
@@ -383,7 +348,7 @@ export default function HandwrittenOCRView({ onSavePrescription, onNavigateToPre
 
               {/* Abbreviations decoded */}
               {result.abbreviationsExpanded && (
-                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
+                <div className="handwritten-abbrev-box">
                   <strong style={{ fontSize: '0.8rem', color: '#92400e', display: 'block', marginBottom: '4px' }}>
                     💡 Latin Medical Abbreviations Decoded:
                   </strong>
