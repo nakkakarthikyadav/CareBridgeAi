@@ -5,6 +5,7 @@ services:
     plan: free
     buildCommand: npm run build
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: 20.18.0
@@ -12,3 +13,5 @@ services:
         value: production
       - key: GEMINI_API_KEY
         sync: false
+      - key: JWT_SECRET
+        generateValue: true

@@ -6,31 +6,55 @@ const INITIAL_ADVICE = [];
 const INITIAL_DIET = [];
 
 export default function TimelineView({ setToastMessage }) {
-  const [meds, setMeds] = useState(() => {
+  // Dynamic synchronization helper from active prescriptions
+  const extractMedsFromPrescriptions = () => {
     try {
+      const rxSaved = localStorage.getItem('carebridge_portal_prescriptions');
+      if (rxSaved) {
+        const rxs = JSON.parse(rxSaved).filter(p => p.id !== 'rx_1' && p.id !== 'rx_2');
+        if (rxs.length > 0) {
+          const extracted = rxs.flatMap(rx => (rx.medications || []).map((m, idx) => ({
+            id: `rx_med_${rx.id}_${idx}`,
+            title: `${m.name} ${m.dosage && m.dosage !== 'As directed' ? m.dosage : ''}`.trim(),
+            time: m.schedule?.toLowerCase().includes('night') || m.schedule?.toLowerCase().includes('evening') ? '08:00 PM' : '08:00 AM',
+            dose: m.dosage || '1 dose',
+            done: false,
+            alarmEnabled: true
+          })));
+          if (extracted.length > 0) return extracted;
+        }
+      }
       const saved = localStorage.getItem('carebridge_meds_checklist');
       if (saved) {
         const parsed = JSON.parse(saved);
         const filtered = parsed.filter(m => !['m1', 'm2', 'm3', 'm4'].includes(m.id));
         if (filtered.length > 0) return filtered;
       }
-      // Automatic sync from latest prescriptions
-      const rxSaved = localStorage.getItem('carebridge_portal_prescriptions');
-      if (rxSaved) {
-        const rxs = JSON.parse(rxSaved).filter(p => p.id !== 'rx_1' && p.id !== 'rx_2');
-        const extracted = rxs.flatMap(rx => (rx.medications || []).map((m, idx) => ({
-          id: `rx_med_${rx.id}_${idx}`,
-          title: `${m.name} ${m.dosage && m.dosage !== 'As directed' ? m.dosage : ''}`.trim(),
-          time: m.schedule?.toLowerCase().includes('night') || m.schedule?.toLowerCase().includes('evening') ? '08:00 PM' : '08:00 AM',
-          dose: m.dosage || '1 dose',
-          done: false,
-          alarmEnabled: true
-        })));
-        if (extracted.length > 0) return extracted;
-      }
     } catch {}
     return [];
-  });
+  };
+
+  const [meds, setMeds] = useState(extractMedsFromPrescriptions);
+
+  // Re-sync checklist whenever prescriptions change or are uploaded
+  useEffect(() => {
+    const handlePrescriptionUpdate = () => {
+      const freshMeds = extractMedsFromPrescriptions();
+      setMeds(prev => {
+        return freshMeds.map(fresh => {
+          const match = prev.find(p => p.id === fresh.id || p.title === fresh.title);
+          return match ? { ...fresh, done: match.done, alarmEnabled: match.alarmEnabled } : fresh;
+        });
+      });
+    };
+
+    window.addEventListener('carebridge:prescription-updated', handlePrescriptionUpdate);
+    window.addEventListener('storage', handlePrescriptionUpdate);
+    return () => {
+      window.removeEventListener('carebridge:prescription-updated', handlePrescriptionUpdate);
+      window.removeEventListener('storage', handlePrescriptionUpdate);
+    };
+  }, []);
 
   const [advice, setAdvice] = useState(() => {
     try {
@@ -87,8 +111,9 @@ export default function TimelineView({ setToastMessage }) {
         if (item.id === id) {
           const newDone = !item.done;
           if (newDone) {
-            logAction(`Took dose: ${item.text.split('—')[0].trim()} at ${nowStr}`);
-            setToastMessage(`✅ Marked dose completed: ${item.text.split('—')[0].trim()}`);
+            const medLabel = (item.title || item.text || item.name || 'Medication').split('—')[0].trim();
+            logAction(`Took dose: ${medLabel} at ${nowStr}`);
+            setToastMessage(`✅ Marked dose completed: ${medLabel}`);
           }
           return { ...item, done: newDone };
         }
@@ -99,7 +124,8 @@ export default function TimelineView({ setToastMessage }) {
         if (item.id === id) {
           const newDone = !item.done;
           if (newDone) {
-            logAction(`Completed: ${item.text.slice(0, 45)}... at ${nowStr}`);
+            const advLabel = (item.title || item.text || 'Discharge Advice').slice(0, 45);
+            logAction(`Completed: ${advLabel}... at ${nowStr}`);
           }
           return { ...item, done: newDone };
         }
@@ -110,7 +136,8 @@ export default function TimelineView({ setToastMessage }) {
         if (item.id === id) {
           const newDone = !item.done;
           if (newDone) {
-            logAction(`Adhered to: ${item.text.slice(0, 40)}... at ${nowStr}`);
+            const dietLabel = (item.title || item.text || 'Diet Protocol').slice(0, 40);
+            logAction(`Adhered to: ${dietLabel}... at ${nowStr}`);
           }
           return { ...item, done: newDone };
         }
@@ -301,7 +328,7 @@ export default function TimelineView({ setToastMessage }) {
                         color: item.done ? '#15803d' : 'var(--navy)',
                         textDecoration: item.done ? 'line-through' : 'none'
                       }}>
-                        {item.text}
+                        {item.title || item.text || item.name || 'Prescribed Medication'}
                       </span>
                     </div>
 
@@ -310,7 +337,7 @@ export default function TimelineView({ setToastMessage }) {
                       title="Play synthesized audio alarm chime"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSoundChime(item.text.split('—')[0].trim());
+                        handleSoundChime((item.title || item.text || item.name || 'Medication').split('—')[0].trim());
                       }}
                       style={{
                         background: 'none',

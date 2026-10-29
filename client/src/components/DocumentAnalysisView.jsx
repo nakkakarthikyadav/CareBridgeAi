@@ -16,7 +16,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
-  const autoSavePrescription = (data, previewUrl, fileObj) => {
+  const saveConfirmedPrescription = (data, previewUrl, fileObj) => {
     const medsList = (data.medications || []).map((m, idx) => ({
       id: `med_${Date.now()}_${idx}`,
       name: m.name || m.drugName || 'Medication',
@@ -29,29 +29,30 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
     const newPrescription = {
       id: `rx_${Date.now()}`,
       title: docType === 'Handwritten Prescription' ? "Doctor's Handwritten Prescription" : (data.docTitle || "Hospital Discharge Prescription"),
-      doctor: data.detectedDoctor || 'Attending Physician',
-      clinic: data.detectedClinic || 'Outpatient Specialty Clinic',
+      doctor: data.detectedDoctor || 'Physician (from document)',
+      clinic: data.detectedClinic || 'Clinical Facility',
       date: new Date().toISOString().split('T')[0],
       diagnosis: (data.keyDiagnoses && data.keyDiagnoses.join(', ')) || 'Clinical Post-Discharge Treatment',
       status: 'Active',
-      refill: '1 Refill Remaining (30-day supply)',
+      refill: '',
       documentType: fileObj ? `${fileObj.type?.includes('pdf') ? 'PDF Scan' : 'Prescription Photo'} (Vision OCR)` : 'Clinical Text Record',
       imagePreview: previewUrl || null,
       medications: medsList,
       dailyCareChecklist: data.dailyCareChecklist || [],
       emergencyRedFlags: data.emergencyRedFlags || [],
-      notes: data.summary || 'Uploaded and verified by CareBridge AI Clinical Vision OCR.'
+      notes: data.summary || 'Uploaded and verified by CareBridge AI Clinical Vision OCR.',
+      verificationStatus: 'VERIFIED',
+      humanVerified: true
     };
 
     let newApt = null;
     if (data.followUpAppointment) {
       newApt = {
         id: `apt_${Date.now()}`,
-        doctor: data.detectedDoctor || 'Specialty Follow-up Clinic',
-        clinic: data.detectedClinic || 'Outpatient Medical Center',
+        doctor: data.detectedDoctor || 'Follow-up Clinic',
+        clinic: data.detectedClinic || 'Outpatient Facility',
         specialty: 'Post-Discharge Review',
         date: data.followUpAppointment,
-        daysRemaining: 10,
         notes: 'Bring current medication list and vitals log.'
       };
     }
@@ -106,6 +107,10 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
       } catch (err) {
         console.error('Failed to auto-save prescription to localStorage', err);
       }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('carebridge:prescription-updated'));
     }
 
     setSavedSuccess(true);
@@ -175,7 +180,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
       const resData = await response.json();
       if (resData.success && resData.data) {
         setResult(resData.data);
-        autoSavePrescription(resData.data, filePreviewUrl, selectedFile);
+        // Do not auto-save silently; present confirmation review to patient/caregiver
       } else {
         setError(resData.error || 'Failed to process document. Please try again.');
       }
@@ -189,7 +194,21 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
 
   const handleSaveToMyPrescriptions = () => {
     if (!result) return;
-    autoSavePrescription(result, filePreviewUrl, selectedFile);
+    saveConfirmedPrescription(result, filePreviewUrl, selectedFile);
+    setSavedSuccess(true);
+  };
+
+  const handleConfirmAndNavigate = (targetStep = 'prescriptions') => {
+    if (result && !savedSuccess) {
+      saveConfirmedPrescription(result, filePreviewUrl, selectedFile);
+      setSavedSuccess(true);
+    }
+    if (targetStep === 'prescriptions') {
+      if (onNavigateToPrescriptions) onNavigateToPrescriptions();
+    } else {
+      if (onNavigateToStep) onNavigateToStep(targetStep);
+      else if (onNavigateToPrescriptions) onNavigateToPrescriptions();
+    }
   };
 
   return (
@@ -641,10 +660,30 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
               <button
                 type="button"
-                onClick={onNavigateToPrescriptions}
+                onClick={handleSaveToMyPrescriptions}
+                style={{
+                  background: savedSuccess ? '#16a34a' : '#000000',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 18px',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>{savedSuccess ? '✅ Verified & Saved' : '✓ Confirm & Save to Dashboard'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleConfirmAndNavigate('prescriptions')}
                 style={{
                   background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
                   color: '#ffffff',
@@ -667,7 +706,7 @@ export default function DocumentAnalysisView({ currentLang, onSavePrescription, 
               {onNavigateToStep && (
                 <button
                   type="button"
-                  onClick={() => onNavigateToStep('reminders')}
+                  onClick={() => handleConfirmAndNavigate('reminders')}
                   style={{
                     background: '#ffffff',
                     color: '#334155',

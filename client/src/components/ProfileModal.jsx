@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { API_BASE_URL } from '../utils/apiConfig';
+import { API_BASE_URL, setAuthToken, clearAuthToken } from '../utils/apiConfig';
 
 export default function ProfileModal({ isOpen, onClose, userProfile, setUserProfile, setToastMessage, onLoginSuccess }) {
-  if (!isOpen) return null;
-
+  // Call hooks unconditionally at the top level
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'register'
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -11,10 +10,14 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
   // Register specific fields
   const [name, setName] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
+  const [dischargeDate, setDischargeDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [emergencyContact, setEmergencyContact] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // If not open, return null after all hooks have been declared
+  if (!isOpen) return null;
 
   const handleSignIn = async (e) => {
     if (e) e.preventDefault();
@@ -34,7 +37,10 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
       });
 
       const data = await response.json();
-      if (data.success && data.user) {
+      if (response.ok && data.success && data.user) {
+        if (data.token) {
+          setAuthToken(data.token);
+        }
         const loggedUser = { ...data.user, isLoggedIn: true };
         setUserProfile(loggedUser);
         localStorage.setItem('carebridge_user', JSON.stringify(loggedUser));
@@ -42,34 +48,10 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
         onClose();
         if (onLoginSuccess) onLoginSuccess(loggedUser);
       } else {
-        // Fallback local login if backend file is unreachable
-        if (password.length >= 4) {
-          const fallbackUser = {
-            name: emailOrPhone.split('@')[0] || 'Patient',
-            email: emailOrPhone,
-            isLoggedIn: true
-          };
-          setUserProfile(fallbackUser);
-          localStorage.setItem('carebridge_user', JSON.stringify(fallbackUser));
-          setToastMessage(`Welcome, ${fallbackUser.name}!`);
-          onClose();
-          if (onLoginSuccess) onLoginSuccess(fallbackUser);
-        } else {
-          setError(data.error || 'Invalid credentials.');
-        }
+        setError(data.error || 'Invalid credentials. Please verify your email/phone and password.');
       }
     } catch {
-      // Local fallback
-      const fallbackUser = {
-        name: emailOrPhone.split('@')[0] || 'Patient',
-        email: emailOrPhone,
-        isLoggedIn: true
-      };
-      setUserProfile(fallbackUser);
-      localStorage.setItem('carebridge_user', JSON.stringify(fallbackUser));
-      setToastMessage(`Welcome, ${fallbackUser.name}!`);
-      onClose();
-      if (onLoginSuccess) onLoginSuccess(fallbackUser);
+      setError('Could not connect to the authentication server. Please check your network or try again.');
     } finally {
       setLoading(false);
     }
@@ -93,13 +75,17 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
           name: name.trim(),
           emailOrPhone: emailOrPhone.trim(),
           password,
-          diagnosis: diagnosis.trim(),
+          diagnosis: diagnosis.trim() || 'General Post-Discharge Recovery',
+          dischargeDate: dischargeDate.trim(),
           emergencyContact: emergencyContact.trim()
         })
       });
 
       const data = await response.json();
-      if (data.success && data.user) {
+      if (response.ok && data.success && data.user) {
+        if (data.token) {
+          setAuthToken(data.token);
+        }
         const loggedUser = { ...data.user, isLoggedIn: true };
         setUserProfile(loggedUser);
         localStorage.setItem('carebridge_user', JSON.stringify(loggedUser));
@@ -107,25 +93,21 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
         onClose();
         if (onLoginSuccess) onLoginSuccess(loggedUser);
       } else {
-        setError(data.error || 'Failed to create account.');
+        setError(data.error || 'Failed to create account. Please try again.');
       }
     } catch {
-      // Local fallback
-      const localUser = {
-        name: name.trim(),
-        email: emailOrPhone.trim(),
-        diagnosis: diagnosis.trim(),
-        emergencyContact: emergencyContact.trim(),
-        isLoggedIn: true
-      };
-      setUserProfile(localUser);
-      localStorage.setItem('carebridge_user', JSON.stringify(localUser));
-      setToastMessage(`Welcome, ${localUser.name}!`);
-      onClose();
-      if (onLoginSuccess) onLoginSuccess(localUser);
+      setError('Could not connect to the authentication server. Please check your network connection.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSignOut = () => {
+    clearAuthToken();
+    const cleared = { name: '', email: '', phone: '', diagnosis: '', isLoggedIn: false };
+    setUserProfile(cleared);
+    setToastMessage('Signed out successfully.');
+    onClose();
   };
 
   return (
@@ -145,6 +127,7 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
             cursor: 'pointer',
             color: '#94a3b8'
           }}
+          aria-label="Close modal"
         >
           ×
         </button>
@@ -156,7 +139,7 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
             CareBridge AI Patient Portal
           </h3>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Personalized recovery timelines, drug safety checks &amp; adherence alarms.
+            Clinical post-discharge recovery timelines, drug safety checks &amp; adherence monitoring.
           </p>
         </div>
 
@@ -190,7 +173,7 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
                     {userProfile.name}
                   </h4>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                    {userProfile.email || userProfile.phone || 'Signed In Patient'}
+                    {userProfile.email || userProfile.phone || 'Authenticated Patient'}
                   </span>
                 </div>
               </div>
@@ -221,14 +204,7 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
 
               <button
                 type="button"
-                onClick={() => {
-                  const cleared = { name: '', email: '', phone: '', diagnosis: '', isLoggedIn: false };
-                  setUserProfile(cleared);
-                  localStorage.removeItem('carebridge_user');
-                  localStorage.removeItem('carebridge_auth_token');
-                  setToastMessage('Signed out successfully.');
-                  onClose();
-                }}
+                onClick={handleSignOut}
                 style={{
                   background: '#fef2f2',
                   border: '1px solid #fecaca',
@@ -269,91 +245,123 @@ export default function ProfileModal({ isOpen, onClose, userProfile, setUserProf
               </div>
             )}
 
-        {/* Sign In Form */}
-        {authMode === 'signin' && (
-          <form onSubmit={handleSignIn}>
-            <div className="auth-form-group">
-              <label className="auth-label">Email Address or Phone Number</label>
-              <input 
-                type="text" 
-                className="auth-input" 
-                placeholder="e.g. sarah@carebridge.ai or +1 555-019-2834"
-                value={emailOrPhone}
-                onChange={(e) => setEmailOrPhone(e.target.value)}
-                required
-              />
-            </div>
+            {/* Sign In Form */}
+            {authMode === 'signin' && (
+              <form onSubmit={handleSignIn}>
+                <div className="auth-form-group">
+                  <label className="auth-label">Email Address or Phone Number</label>
+                  <input 
+                    type="text" 
+                    className="auth-input" 
+                    placeholder="e.g. robert@carebridge.ai or +1 555-019-2834"
+                    value={emailOrPhone}
+                    onChange={(e) => setEmailOrPhone(e.target.value)}
+                    required
+                  />
+                </div>
 
-            <div className="auth-form-group">
-              <label className="auth-label">Password</label>
-              <input 
-                type="password" 
-                className="auth-input" 
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+                <div className="auth-form-group">
+                  <label className="auth-label">Password</label>
+                  <input 
+                    type="password" 
+                    className="auth-input" 
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
 
-            <button 
-              type="submit" 
-              className="btn-auth-submit"
-              disabled={loading}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-        )}
+                <button 
+                  type="submit" 
+                  className="btn-auth-submit"
+                  disabled={loading}
+                >
+                  {loading ? 'Verifying Credentials...' : 'Sign In'}
+                </button>
+              </form>
+            )}
 
-        {/* Register Form */}
-        {authMode === 'register' && (
-          <form onSubmit={handleRegister}>
-            <div className="auth-form-group">
-              <label className="auth-label">Patient Full Name</label>
-              <input 
-                type="text" 
-                className="auth-input" 
-                placeholder="e.g. Robert Miller"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
+            {/* Register Form */}
+            {authMode === 'register' && (
+              <form onSubmit={handleRegister}>
+                <div className="auth-form-group">
+                  <label className="auth-label">Patient Full Name</label>
+                  <input 
+                    type="text" 
+                    className="auth-input" 
+                    placeholder="e.g. Sarah Jenkins"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
 
-            <div className="auth-form-group">
-              <label className="auth-label">Email Address or Mobile Phone</label>
-              <input 
-                type="text" 
-                className="auth-input" 
-                placeholder="e.g. robert@example.com or +1 555-019-4455"
-                value={emailOrPhone}
-                onChange={(e) => setEmailOrPhone(e.target.value)}
-                required
-              />
-            </div>
+                <div className="auth-form-group">
+                  <label className="auth-label">Email Address or Mobile Phone</label>
+                  <input 
+                    type="text" 
+                    className="auth-input" 
+                    placeholder="e.g. sarah@example.com or +1 555-019-4455"
+                    value={emailOrPhone}
+                    onChange={(e) => setEmailOrPhone(e.target.value)}
+                    required
+                  />
+                </div>
 
-            <div className="auth-form-group">
-              <label className="auth-label">Create Password</label>
-              <input 
-                type="password" 
-                className="auth-input" 
-                placeholder="Minimum 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+                <div className="auth-form-group">
+                  <label className="auth-label">Discharge / Primary Condition</label>
+                  <input 
+                    type="text" 
+                    className="auth-input" 
+                    placeholder="e.g. Post-Cardiac Stent Recovery"
+                    value={diagnosis}
+                    onChange={(e) => setDiagnosis(e.target.value)}
+                  />
+                </div>
 
-            <button 
-              type="submit" 
-              className="btn-auth-submit"
-              disabled={loading}
-            >
-              {loading ? 'Creating Account...' : 'Create Account & Start Recovery Plan'}
-            </button>
-          </form>
-        )}
+                <div className="auth-form-group">
+                  <label className="auth-label">Hospital Discharge Date</label>
+                  <input 
+                    type="date" 
+                    className="auth-input" 
+                    value={dischargeDate}
+                    onChange={(e) => setDischargeDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="auth-form-group">
+                  <label className="auth-label">Emergency Caregiver Contact (Optional)</label>
+                  <input 
+                    type="text" 
+                    className="auth-input" 
+                    placeholder="e.g. Michael Jenkins (+1 555-019-9988)"
+                    value={emergencyContact}
+                    onChange={(e) => setEmergencyContact(e.target.value)}
+                  />
+                </div>
+
+                <div className="auth-form-group">
+                  <label className="auth-label">Create Password (Min 6 Characters)</label>
+                  <input 
+                    type="password" 
+                    className="auth-input" 
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="btn-auth-submit"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating Account...' : 'Create Account & Start Recovery Plan'}
+                </button>
+              </form>
+            )}
           </>
         )}
       </div>

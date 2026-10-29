@@ -10,9 +10,12 @@ import {
   handleLogin,
   handleGoogleAuth,
   handleGetMe,
-  handleUpdateProfile
+  handleUpdateProfile,
+  authRateLimiter,
+  authenticateToken
 } from './auth.js';
 import v1Router from './api_v1.js';
+import { callGemini, parseGeminiJson } from './geminiService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,100 +26,50 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Mount /api/v1 REST API
+// Health Check Endpoint for Render / Deployment monitoring
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'CareBridge AI Post-Discharge Clinical Platform',
+    version: '1.0.0',
+    aiIntegration: {
+      provider: 'Google Gemini',
+      configured: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here')
+    }
+  });
+});
+
+// Mount /api/v1 REST API (Protected by JWT auth & anti-IDOR authorization)
 app.use('/api/v1', v1Router);
 
 // Multer memory storage for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024 }
-});
-
-// Helper: Call Gemini REST API directly with fallback models
-async function callGemini(prompt, systemInstruction = '', inlineData = null) {
-  const models = [
-    'gemini-3.5-flash',
-    'gemini-3.5-flash-lite',
-    'gemini-flash-lite-latest',
-    'gemini-3-flash-preview',
-    'gemini-3.7-flash',
-    'gemini-3.8-flash'
-  ];
-
-  if (GEMINI_API_KEY && GEMINI_API_KEY.trim() && GEMINI_API_KEY !== 'your_gemini_api_key_here') {
-    for (const model of models) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-        
-        const contentsParts = [];
-        if (inlineData) {
-          contentsParts.push({
-            inlineData: {
-              mimeType: inlineData.mimeType,
-              data: inlineData.base64
-            }
-          });
-        }
-        contentsParts.push({ text: prompt });
-
-        const requestBody = {
-          contents: [{ role: 'user', parts: contentsParts }],
-          generationConfig: {
-            temperature: 0.2,
-            topP: 0.8,
-            maxOutputTokens: 2048
-          }
-        };
-
-        if (systemInstruction) {
-          requestBody.systemInstruction = {
-            parts: [{ text: systemInstruction }]
-          };
-        }
-
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const candidate = data.candidates?.[0];
-          const text = candidate?.content?.parts?.map(p => p.text).join('') || '';
-          if (text) {
-            console.log(`[Gemini API] Successfully generated content using model: ${model}`);
-            return text;
-          }
-        } else {
-          const errData = await response.json().catch(() => ({}));
-          console.warn(`[Gemini API] Model ${model} returned HTTP ${response.status}:`, errData?.error?.message || response.statusText);
-        }
-      } catch (err) {
-        console.warn(`Failed on model ${model}:`, err.message);
-      }
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedMime = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'application/pdf'];
+    if (allowedMime.includes(file.mimetype) || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file format. Please upload a JPEG, PNG, WEBP image or PDF document.'));
     }
   }
+});
 
-  // If Gemini API could not process the request, throw an error instead of returning mock data
-  throw new Error("Clinical AI service temporarily unavailable. Please verify your connection or Gemini API key.");
-}
+// Authentication & Patient Identity Routes (with Rate Limiting)
+app.post('/api/auth/register', authRateLimiter, handleRegister);
+app.post('/api/auth/login', authRateLimiter, handleLogin);
+app.post('/api/auth/google', authRateLimiter, handleGoogleAuth);
+app.get('/api/auth/me', authenticateToken, handleGetMe);
+app.put('/api/auth/profile', authenticateToken, handleUpdateProfile);
 
-// Authentication & Patient Identity Routes
-app.post('/api/auth/register', handleRegister);
-app.post('/api/auth/login', handleLogin);
-app.post('/api/auth/google', handleGoogleAuth);
-app.get('/api/auth/me', handleGetMe);
-app.put('/api/auth/profile', handleUpdateProfile);
-
-
-// 1b. Handwritten Prescription Recognition (Automate identification & recognition of handwritten text from image)
+// 1. Handwritten Prescription Recognition (OCR + Clinical Extraction)
 app.post('/api/handwritten-ocr', upload.single('prescriptionImage'), async (req, res) => {
   try {
     if (!req.file) {
@@ -129,55 +82,58 @@ app.post('/api/handwritten-ocr', upload.single('prescriptionImage'), async (req,
     };
 
     const systemPrompt = `You are an automated Optical Character Recognition (OCR) and Handwritten Text Recognition (HTR) system specializing in physician handwriting identification and transcription, inspired by CRNN-CTC handwriting recognition pipelines.
-Your task is to accurately transcribe messy cursive medical handwriting from the prescription image into normal, clear, typed digital text.
-You must expand all medical abbreviations (e.g. Rx, tid, bid, od, sos, po, hs) and correct common handwriting misinterpretations using a medical lexicon.`;
+Your task is to accurately transcribe medical handwriting from the prescription image into clear digital text.
+Extract only the text that is genuinely visible on the image. Do NOT invent missing medications, clinics, or physician names.
+Identify any abbreviations (e.g. Rx, tid, bid, od, sos, po, hs) and clearly flag any ambiguous, smudged, or uncertain handwriting.`;
 
     const userPrompt = `Analyze this handwritten prescription image.
-Perform automated line-level and word-level recognition.
+Perform line-level and word-level recognition.
 
 Return a valid JSON response with the following format:
 {
-  "detectedDoctor": "Doctor name and credentials detected",
-  "detectedClinic": "Clinic or hospital header name",
-  "prescriptionDate": "Date on prescription",
-  "patientName": "Patient name and age",
+  "detectedDoctor": "Doctor name and credentials if visible, or null",
+  "detectedClinic": "Clinic or hospital header name if visible, or null",
+  "prescriptionDate": "Date on prescription if visible, or null",
+  "patientName": "Patient name and age if visible, or null",
   "rawHandwrittenLines": [
-    "Exact verbatim line 1 transcribed from handwriting",
-    "Exact verbatim line 2 transcribed from handwriting"
+    "Exact verbatim line transcribed from handwriting"
   ],
-  "normalizedDigitalText": "Clean, polished normal typed text ready to print or email",
+  "normalizedDigitalText": "Clean, polished normal typed text",
   "medicationsList": [
     {
       "drugName": "Medication brand / generic name",
-      "dosage": "Dosage (e.g. 500mg)",
-      "frequency": "Frequency in plain English (e.g. Three times daily)",
-      "duration": "Duration (e.g. 7 days)",
-      "instructions": "e.g. Take with water after meals",
+      "dosage": "Dosage (e.g. 500mg, or 'As directed' if not legible)",
+      "frequency": "Frequency in plain English (e.g. Twice daily)",
+      "duration": "Duration if stated",
+      "instructions": "Directions for use",
       "caution": "Special precautions or warnings"
     }
   ],
   "abbreviationsExpanded": [
-    {"abbreviation": "tid", "meaning": "Ter in die (Three times a day)"},
-    {"abbreviation": "sos", "meaning": "Si opus sit (If needed for symptoms)"},
-    {"abbreviation": "od", "meaning": "Omni die (Once a day)"}
+    {"abbreviation": "tid", "meaning": "Three times a day"}
   ],
-  "confidenceScore": "96.4%"
+  "ambiguousOrUnclearFields": [
+    "List of any specific words, numbers, or dosages that are unclear and require patient or pharmacist confirmation"
+  ],
+  "verificationRequired": true
 }
 Return only JSON without markdown fences.`;
 
-    const rawResponse = await callGemini(userPrompt, systemPrompt, fileData);
-    let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      parsed = { rawText: rawResponse };
-    }
+    const aiResult = await callGemini(userPrompt, systemPrompt, fileData);
+    const parsed = parseGeminiJson(aiResult.text);
 
-    res.json({ success: true, data: parsed });
+    res.json({
+      success: true,
+      data: parsed || { rawText: aiResult.text },
+      meta: aiResult.meta
+    });
   } catch (error) {
-    console.error('Handwritten OCR error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Handwritten OCR error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code || 'OCR_PROCESSING_FAILED'
+    });
   }
 });
 
@@ -194,49 +150,59 @@ app.post('/api/analyze-document', upload.single('file'), async (req, res) => {
       };
     }
 
-    const systemPrompt = `You are CareBridge AI, a clinical medical communication assistant designed by Sree Charan & Karthik.
-You translate complex hospital discharge documents and handwritten prescriptions into plain, empathetic, crystal-clear instructions for patients and their families.
-Always prioritize safety, detect potential medication confusion, highlight red flags, and provide actionable next steps.
+    if (!fileData && (!textContent || !textContent.trim())) {
+      return res.status(400).json({ success: false, error: 'Please provide either a document file or document text to analyze.' });
+    }
+
+    const systemPrompt = `You are CareBridge AI, a clinical medical communication assistant.
+Your job is to read and transcribe the provided medical document or prescription image with 100% fidelity.
+CRITICAL CLINICAL INSTRUCTION:
+- Extract ONLY the medications, dosages, routes, and instructions that are ACTUALLY WRITTEN or PRINTED on the attached document.
+- NEVER invent, hallucinate, or default to generic medications (such as Aspirin, Lisinopril, Metoprolol, or Amoxicillin) unless they are genuinely written in this specific document.
+- If the document contains 1 medication, return only that 1 medication. If it contains 3, return exactly those 3. If no medications are found, return an empty array [].
 Language requested: ${language}.`;
 
-    const userPrompt = `Please analyze this medical document (${docType}):
-${textContent ? `DOCUMENT CONTENT:\n${textContent}\n` : 'Document provided as attached image/file.'}
+    const userPrompt = `Analyze the attached medical document (${docType}):
+${textContent ? `DOCUMENT CONTENT:\n${textContent}\n` : 'Carefully read the attached image/file.'}
 
-Provide a structured response in clean JSON format with these exact keys:
+Extract the exact clinical details into this JSON format:
 {
-  "summary": "2-3 sentences plain language summary of hospital stay/diagnosis",
-  "keyDiagnoses": ["diagnosis 1", "diagnosis 2"],
+  "summary": "2-3 sentences plain language summary based strictly on this document",
+  "keyDiagnoses": ["diagnosis if mentioned in document"],
   "medications": [
     {
-      "name": "Medication Name & Dosage",
-      "purpose": "Why patient takes it in simple words",
-      "schedule": "Exact time of day (Morning, Noon, Night)",
-      "instructions": "e.g. With food, avoid milk, do not crush",
-      "criticalWarning": "e.g. Do not stop abruptly"
+      "name": "Exact Medication Name & Dosage written on document",
+      "purpose": "Plain English purpose",
+      "schedule": "Schedule written (e.g., Morning, Twice daily, Bedtime)",
+      "instructions": "Exact instructions written",
+      "criticalWarning": "Warning if relevant"
     }
   ],
-  "dailyCareChecklist": ["task 1", "task 2", "task 3"],
-  "dietaryRestrictions": ["restriction 1", "restriction 2"],
-  "emergencyRedFlags": ["Red flag symptom 1 needing ER immediately", "Red flag 2"],
-  "followUpAppointment": "Date or timeframe recommended",
-  "questionsForDoctor": ["Question 1 patient should ask", "Question 2"]
+  "dailyCareChecklist": ["Specific care instructions written in document"],
+  "dietaryRestrictions": ["Dietary restrictions explicitly mentioned"],
+  "emergencyRedFlags": ["Red flag warning symptoms mentioned"],
+  "followUpAppointment": "Follow-up date/timeframe if mentioned, or null",
+  "questionsForDoctor": ["Relevant questions for physician based on this document"],
+  "detectedDoctor": "Doctor name if written, or null",
+  "detectedClinic": "Clinic/hospital name if written, or null"
 }
-Ensure you return ONLY valid JSON without markdown fences.`;
+Return only JSON without markdown fences.`;
 
-    const rawResponse = await callGemini(userPrompt, systemPrompt, fileData);
-    let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-    
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      parsed = { rawText: rawResponse };
-    }
+    const aiResult = await callGemini(userPrompt, systemPrompt, fileData);
+    const parsed = parseGeminiJson(aiResult.text);
 
-    res.json({ success: true, data: parsed });
+    res.json({
+      success: true,
+      data: parsed || { rawText: aiResult.text },
+      meta: aiResult.meta
+    });
   } catch (error) {
-    console.error('Error analyzing document:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error analyzing document:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code || 'DOCUMENT_ANALYSIS_FAILED'
+    });
   }
 });
 
@@ -244,13 +210,14 @@ Ensure you return ONLY valid JSON without markdown fences.`;
 app.post('/api/confusion-check', async (req, res) => {
   try {
     const { query, currentMedications = [], patientConditions = [] } = req.body;
-    if (!query) {
-      return res.status(400).json({ error: 'Query or medication name is required.' });
+    if (!query || !query.trim()) {
+      return res.status(400).json({ success: false, error: 'Query or medication name is required.' });
     }
 
     const systemPrompt = `You are CareBridge AI's Clinical Confusion Safety Guard.
 Your primary role is to detect Look-Alike / Sound-Alike (LASA) drug confusions (e.g., Hydralazine vs Hydroxyzine, Metoprolol Tartrate vs Succinate, Celebrex vs Celexa),
-drug-drug interactions, dose unit mix-ups (mg vs mcg), and disease contraindications.`;
+drug-drug interactions, dose unit mix-ups (mg vs mcg), and disease contraindications.
+Provide safe, educational guidance and emphasize consulting a licensed pharmacist or physician.`;
 
     const userPrompt = `Patient query / medication to evaluate: "${query}"
 Patient's known active medications: ${JSON.stringify(currentMedications)}
@@ -271,19 +238,21 @@ Respond in valid JSON with:
 }
 Return only JSON without markdown fences.`;
 
-    const rawResponse = await callGemini(userPrompt, systemPrompt);
-    let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      parsed = { rawText: rawResponse };
-    }
+    const aiResult = await callGemini(userPrompt, systemPrompt);
+    const parsed = parseGeminiJson(aiResult.text);
 
-    res.json({ success: true, data: parsed });
+    res.json({
+      success: true,
+      data: parsed || { rawText: aiResult.text },
+      meta: aiResult.meta
+    });
   } catch (error) {
-    console.error('Confusion check error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Confusion check error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code || 'CONFUSION_CHECK_FAILED'
+    });
   }
 });
 
@@ -293,7 +262,7 @@ app.post('/api/recovery-plan', async (req, res) => {
     const { condition, dischargeDate, medications = [], limitations = '' } = req.body;
 
     const systemPrompt = `You are CareBridge AI's Post-Discharge Recovery Navigator.
-Formulate a personalized recovery timeline for the first 14 days post-discharge.`;
+Formulate an evidence-based recovery timeline for the first 14 days post-discharge based strictly on the provided medical condition and medications.`;
 
     const userPrompt = `Patient condition: ${condition || 'General Post-Surgical / Medical Recovery'}
 Discharge Date: ${dischargeDate || 'Today'}
@@ -309,12 +278,12 @@ Respond in valid JSON:
   ],
   "dailySchedule": [
     { "time": "08:00 AM", "activity": "Morning Medication & Blood Pressure check", "icon": "pill", "category": "medication" },
-    { "time": "09:00 AM", "activity": "High-Protein Breakfast & Hydration (250ml)", "icon": "nutrition", "category": "diet" },
-    { "time": "11:30 AM", "activity": "5-minute gentle hall walking with support", "icon": "walk", "category": "mobility" },
-    { "time": "01:00 PM", "activity": "Light Lunch + Midday dose (if prescribed)", "icon": "pill", "category": "medication" },
-    { "time": "04:00 PM", "activity": "Rest & wound inspection / temperature logging", "icon": "check", "category": "vitals" },
+    { "time": "09:00 AM", "activity": "Nutritious Breakfast & Hydration", "icon": "nutrition", "category": "diet" },
+    { "time": "11:30 AM", "activity": "Gentle mobilization / short walk as tolerated", "icon": "walk", "category": "mobility" },
+    { "time": "01:00 PM", "activity": "Light Lunch + Midday dose if prescribed", "icon": "pill", "category": "medication" },
+    { "time": "04:00 PM", "activity": "Rest & wound inspection / vitals logging", "icon": "check", "category": "vitals" },
     { "time": "07:30 PM", "activity": "Dinner & Evening Medication", "icon": "pill", "category": "medication" },
-    { "time": "10:00 PM", "activity": "Bedtime relaxation & Night vitals check", "icon": "moon", "category": "rest" }
+    { "time": "10:00 PM", "activity": "Bedtime rest & hydration", "icon": "moon", "category": "rest" }
   ],
   "warningSignals": [
     "Fever above 100.4°F (38°C)",
@@ -324,19 +293,21 @@ Respond in valid JSON:
 }
 Return only JSON without markdown fences.`;
 
-    const rawResponse = await callGemini(userPrompt, systemPrompt);
-    let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      parsed = { rawText: rawResponse };
-    }
+    const aiResult = await callGemini(userPrompt, systemPrompt);
+    const parsed = parseGeminiJson(aiResult.text);
 
-    res.json({ success: true, data: parsed });
+    res.json({
+      success: true,
+      data: parsed || { rawText: aiResult.text },
+      meta: aiResult.meta
+    });
   } catch (error) {
-    console.error('Recovery plan error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Recovery plan error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code || 'RECOVERY_PLAN_FAILED'
+    });
   }
 });
 
@@ -367,23 +338,25 @@ Respond in valid JSON with:
     "eveningSnack": "Snack recommendation",
     "dinner": "Dinner recommendation"
   },
-  "hydrationGoal": "e.g., 2.5 Liters daily unless contraindicated by heart/kidney protocol"
+  "hydrationGoal": "Hydration target in liters unless restricted by protocol"
 }
 Return only JSON without markdown fences.`;
 
-    const rawResponse = await callGemini(userPrompt, systemPrompt);
-    let cleaned = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch {
-      parsed = { rawText: rawResponse };
-    }
+    const aiResult = await callGemini(userPrompt, systemPrompt);
+    const parsed = parseGeminiJson(aiResult.text);
 
-    res.json({ success: true, data: parsed });
+    res.json({
+      success: true,
+      data: parsed || { rawText: aiResult.text },
+      meta: aiResult.meta
+    });
   } catch (error) {
-    console.error('Diet plan error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Diet plan error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code || 'DIET_PLAN_FAILED'
+    });
   }
 });
 
@@ -405,6 +378,15 @@ if (fs.existsSync(distPath)) {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
+
+// Global Safe Error Handler (Never leaks stack traces)
+app.use((err, req, res, next) => {
+  console.error('[Unhandled Error]:', err.message);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'An unexpected server error occurred.'
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`CareBridge AI Full-Stack Platform listening on http://localhost:${PORT}`);

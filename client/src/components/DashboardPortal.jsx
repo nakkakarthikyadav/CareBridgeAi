@@ -5,6 +5,7 @@ import DietPlannerView from './DietPlannerView';
 import TimelineView from './TimelineView';
 import DocumentAnalysisView from './DocumentAnalysisView';
 import { playMedicalChime, triggerBrowserNotification } from '../utils/audioChime';
+import { api } from '../utils/apiConfig';
 
 export default function DashboardPortal({ 
   userProfile, 
@@ -86,6 +87,61 @@ export default function DashboardPortal({
     return [];
   });
 
+  const patientId = userProfile?.id;
+
+  // Synchronize with persistent backend database when user is authenticated
+  useEffect(() => {
+    if (!patientId) return;
+
+    let isMounted = true;
+    async function syncBackendData() {
+      try {
+        const [rxRes, aptRes, recRes] = await Promise.allSettled([
+          api.getPrescriptions(patientId),
+          api.getAppointments(patientId),
+          api.getRecoveryLogs(patientId)
+        ]);
+
+        if (!isMounted) return;
+
+        if (rxRes.status === 'fulfilled' && rxRes.value?.success && Array.isArray(rxRes.value.data) && rxRes.value.data.length > 0) {
+          setPrescriptions(rxRes.value.data);
+          try {
+            localStorage.setItem('carebridge_portal_prescriptions', JSON.stringify(rxRes.value.data));
+          } catch {}
+        }
+        if (aptRes.status === 'fulfilled' && aptRes.value?.success && Array.isArray(aptRes.value.data) && aptRes.value.data.length > 0) {
+          setAppointments(aptRes.value.data);
+          try {
+            localStorage.setItem('carebridge_portal_appointments', JSON.stringify(aptRes.value.data));
+          } catch {}
+        }
+        if (recRes.status === 'fulfilled' && recRes.value?.success && Array.isArray(recRes.value.data) && recRes.value.data.length > 0) {
+          const formatted = recRes.value.data.map(r => ({
+            id: r.id,
+            date: `Observed ${new Date(r.entryDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+            painLevel: r.painLevel,
+            temperature: `${r.temperature}°F`,
+            bloodPressure: `${r.systolicBp}/${r.diastolicBp}`,
+            energyLevel: r.energyScore >= 4 ? 'Good Mobility' : 'Resting / Fatigue',
+            woundStatus: r.woundStatus,
+            notes: r.notes,
+            status: r.hasRedFlag ? 'Red Flag Alert' : 'Normal Healing'
+          }));
+          setRecoveryLogs(formatted);
+          try {
+            localStorage.setItem('carebridge_portal_vitals_logs', JSON.stringify(formatted));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Backend sync note:', err.message);
+      }
+    }
+
+    syncBackendData();
+    return () => { isMounted = false; };
+  }, [patientId]);
+
   const handleSavePrescription = (newRx, newApt = null, newMeds = []) => {
     setPrescriptions(prev => {
       const filtered = (prev || []).filter(p => p.id !== newRx.id);
@@ -98,6 +154,13 @@ export default function DashboardPortal({
       return updated;
     });
 
+    // Persist to backend database if authenticated
+    if (patientId) {
+      api.savePrescription(patientId, { ...newRx, syncToActiveMedications: true }).catch(err => {
+        console.warn('Could not persist prescription to backend:', err.message);
+      });
+    }
+
     if (newApt) {
       setAppointments(prev => {
         const filtered = (prev || []).filter(a => a.id !== newApt.id);
@@ -109,21 +172,73 @@ export default function DashboardPortal({
         }
         return updated;
       });
+
+      if (patientId) {
+        api.saveAppointment(patientId, newApt).catch(err => {
+          console.warn('Could not persist appointment to backend:', err.message);
+        });
+      }
     }
 
     if (newMeds && newMeds.length > 0) {
       try {
         const saved = localStorage.getItem('carebridge_meds_checklist');
         const existing = saved ? JSON.parse(saved) : [];
-        const merged = [...newMeds, ...existing.filter(e => !newMeds.some(m => m.title === e.title))];
+        const filteredExisting = existing.filter(e => !['m1', 'm2', 'm3', 'm4'].includes(e.id) && !newMeds.some(m => m.title === e.title));
+        const merged = [...newMeds, ...filteredExisting];
         localStorage.setItem('carebridge_meds_checklist', JSON.stringify(merged));
       } catch (err) {
         console.error('Failed to sync checklist', err);
       }
     }
 
+    // Dispatch event to dynamically sync medication timetable in TimelineView
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('carebridge:prescription-updated'));
+    }
+
     playMedicalChime();
     setToastMessage(`✅ Prescription from ${newRx.doctor || 'Doctor'} uploaded and saved to your dashboard!`);
+  };
+
+  const handleDeletePrescription = (id) => {
+    setPrescriptions(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      try {
+        localStorage.setItem('carebridge_portal_prescriptions', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Failed to update prescriptions in localStorage', err);
+      }
+      return updated;
+    });
+
+    if (patientId) {
+      api.deletePrescription(patientId, id).catch(err => {
+        console.warn('Could not delete prescription from backend:', err.message);
+      });
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('carebridge:prescription-updated'));
+    }
+
+    setToastMessage('🗑️ Prescription removed.');
+  };
+
+  const handleClearAllPrescriptions = () => {
+    setPrescriptions([]);
+    try {
+      localStorage.removeItem('carebridge_portal_prescriptions');
+      localStorage.removeItem('carebridge_meds_checklist');
+      localStorage.removeItem('carebridge_advice_checklist');
+      localStorage.removeItem('carebridge_diet_checklist');
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('carebridge:prescription-updated'));
+    }
+
+    setToastMessage('🗑️ All prescriptions and medication schedules cleared.');
   };
 
   const handleSignOut = () => {
@@ -208,7 +323,16 @@ export default function DashboardPortal({
 
     const updated = [newObj, ...appointments];
     setAppointments(updated);
-    localStorage.setItem('carebridge_portal_appointments', JSON.stringify(updated));
+    try {
+      localStorage.setItem('carebridge_portal_appointments', JSON.stringify(updated));
+    } catch {}
+
+    if (patientId) {
+      api.saveAppointment(patientId, newObj).catch(err => {
+        console.warn('Could not save appointment to backend:', err.message);
+      });
+    }
+
     setShowAddApt(false);
     setNewDoctor('');
     setNewClinic('');
@@ -244,7 +368,23 @@ export default function DashboardPortal({
 
     const updated = [newLog, ...recoveryLogs.slice(0, 8)];
     setRecoveryLogs(updated);
-    localStorage.setItem('carebridge_portal_vitals_logs', JSON.stringify(updated));
+    try {
+      localStorage.setItem('carebridge_portal_vitals_logs', JSON.stringify(updated));
+    } catch {}
+
+    if (patientId) {
+      api.saveRecoveryLog(patientId, {
+        painLevel,
+        temperature: parseFloat(temperature) || 98.6,
+        systolicBp: parseInt(systolic, 10) || 120,
+        diastolicBp: parseInt(diastolic, 10) || 80,
+        energyScore: energyLevel,
+        woundStatus,
+        notes: vitalsNotes
+      }).catch(err => {
+        console.warn('Could not save vitals to backend:', err.message);
+      });
+    }
 
     if (status === 'Red Flag Alert') {
       setToastMessage('🚨 High Red-Flag symptom logged! Please consult your doctor.');
@@ -1199,26 +1339,49 @@ export default function DashboardPortal({
                     </button>
                   )}
                   {prescriptions.length > 0 && !showAddAnotherRx && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddAnotherRx(true)}
-                      style={{
-                        background: '#ffffff',
-                        color: '#4f46e5',
-                        border: '1.5px solid #c7d2fe',
-                        borderRadius: '9999px',
-                        padding: '8px 16px',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <span>➕</span>
-                      <span>Add Another Prescription</span>
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleClearAllPrescriptions}
+                        style={{
+                          background: '#fef2f2',
+                          color: '#b91c1c',
+                          border: '1px solid #fecaca',
+                          borderRadius: '9999px',
+                          padding: '8px 16px',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>🗑️</span>
+                        <span>Clear All Prescriptions</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowAddAnotherRx(true)}
+                        style={{
+                          background: '#ffffff',
+                          color: '#4f46e5',
+                          border: '1.5px solid #c7d2fe',
+                          borderRadius: '9999px',
+                          padding: '8px 16px',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>➕</span>
+                        <span>Add Another Prescription</span>
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -1245,19 +1408,19 @@ export default function DashboardPortal({
                 </div>
               ) : (
                 <>
-                  {/* Filters row (Black and White) */}
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', borderBottom: '1.5px solid #000000', paddingBottom: '1rem' }}>
+                  {/* Filters row */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
                     <button
                       type="button"
                       onClick={() => setPrescriptionFilter('all')}
                       style={{
-                        background: prescriptionFilter === 'all' ? '#000000' : '#ffffff',
-                        color: prescriptionFilter === 'all' ? '#ffffff' : '#000000',
-                        border: '1.5px solid #000000',
+                        background: prescriptionFilter === 'all' ? '#4f46e5' : '#ffffff',
+                        color: prescriptionFilter === 'all' ? '#ffffff' : '#475569',
+                        border: `1px solid ${prescriptionFilter === 'all' ? '#4f46e5' : '#cbd5e1'}`,
                         borderRadius: '9999px',
                         padding: '6px 14px',
                         fontSize: '0.8rem',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         cursor: 'pointer'
                       }}
                     >
@@ -1268,13 +1431,13 @@ export default function DashboardPortal({
                       type="button"
                       onClick={() => setPrescriptionFilter('active')}
                       style={{
-                        background: prescriptionFilter === 'active' ? '#000000' : '#ffffff',
-                        color: prescriptionFilter === 'active' ? '#ffffff' : '#000000',
-                        border: '1.5px solid #000000',
+                        background: prescriptionFilter === 'active' ? '#4f46e5' : '#ffffff',
+                        color: prescriptionFilter === 'active' ? '#ffffff' : '#475569',
+                        border: `1px solid ${prescriptionFilter === 'active' ? '#4f46e5' : '#cbd5e1'}`,
                         borderRadius: '9999px',
                         padding: '6px 14px',
                         fontSize: '0.8rem',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         cursor: 'pointer'
                       }}
                     >
@@ -1285,13 +1448,13 @@ export default function DashboardPortal({
                       type="button"
                       onClick={() => setPrescriptionFilter('refills')}
                       style={{
-                        background: prescriptionFilter === 'refills' ? '#000000' : '#ffffff',
-                        color: prescriptionFilter === 'refills' ? '#ffffff' : '#000000',
-                        border: '1.5px solid #000000',
+                        background: prescriptionFilter === 'refills' ? '#4f46e5' : '#ffffff',
+                        color: prescriptionFilter === 'refills' ? '#ffffff' : '#475569',
+                        border: `1px solid ${prescriptionFilter === 'refills' ? '#4f46e5' : '#cbd5e1'}`,
                         borderRadius: '9999px',
                         padding: '6px 14px',
                         fontSize: '0.8rem',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         cursor: 'pointer'
                       }}
                     >
@@ -1305,11 +1468,11 @@ export default function DashboardPortal({
                   <div
                     key={rx.id}
                     style={{
-                      border: '2px solid #000000',
+                      border: '1px solid #e2e8f0',
                       borderRadius: 'var(--radius-lg)',
                       padding: '1.75rem',
                       background: '#ffffff',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)'
+                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)'
                     }}
                   >
                     {/* Prescription Top Header */}
@@ -1317,58 +1480,57 @@ export default function DashboardPortal({
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{
-                            background: '#ffffff',
-                            color: '#000000',
+                            background: '#eef2ff',
+                            color: '#4f46e5',
                             fontSize: '0.75rem',
                             fontWeight: 800,
                             padding: '3px 10px',
                             borderRadius: '9999px',
-                            border: '1.5px solid #000000'
+                            border: '1px solid #c7d2fe'
                           }}>
                             ✓ {rx.status}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: '#111827' }}>
+                          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
                             📅 Prescribed: <strong>{rx.date}</strong>
                           </span>
                           <span style={{
                             background: '#f1f5f9',
-                            color: '#000000',
+                            color: '#475569',
                             fontSize: '0.725rem',
-                            fontWeight: 800,
+                            fontWeight: 700,
                             padding: '2px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #000000'
+                            borderRadius: '4px'
                           }}>
                             {rx.documentType}
                           </span>
                         </div>
 
-                        <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#000000', margin: '8px 0 4px 0' }}>
+                        <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--navy)', margin: '8px 0 4px 0' }}>
                           {rx.title}
                         </h3>
 
-                        <div style={{ fontSize: '0.875rem', color: '#111827' }}>
+                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
                           Prescribing Physician: <strong>{rx.doctor}</strong> • 📍 {rx.clinic}
                         </div>
-                        <div style={{ fontSize: '0.825rem', color: '#111827', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '2px' }}>
                           Diagnosis / Indication: <strong>{rx.diagnosis}</strong> • Refill: <strong>{rx.refill}</strong>
                         </div>
                       </div>
 
                       {/* Right top actions */}
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {rx.imagePreview && (
                           <button
                             type="button"
                             onClick={() => setPreviewModalRx(rx)}
                             style={{
                               background: '#ffffff',
-                              border: '1.5px solid #000000',
-                              color: '#000000',
+                              border: '1px solid #cbd5e1',
+                              color: '#334155',
                               borderRadius: 'var(--radius-sm)',
                               padding: '8px 14px',
                               fontSize: '0.8rem',
-                              fontWeight: 800,
+                              fontWeight: 700,
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
@@ -1385,12 +1547,12 @@ export default function DashboardPortal({
                           onClick={() => handlePrintPrescription(rx)}
                           style={{
                             background: '#ffffff',
-                            border: '1.5px solid #000000',
-                            color: '#000000',
+                            border: '1px solid #cbd5e1',
+                            color: '#334155',
                             borderRadius: 'var(--radius-sm)',
                             padding: '8px 14px',
                             fontSize: '0.8rem',
-                            fontWeight: 800,
+                            fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -1400,12 +1562,33 @@ export default function DashboardPortal({
                           <span>📄</span>
                           <span>Export / Print</span>
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePrescription(rx.id)}
+                          style={{
+                            background: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            color: '#b91c1c',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '8px 14px',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <span>🗑️</span>
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </div>
 
                     {/* Prescribed Medications Grid */}
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', color: '#000000', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.5px', marginBottom: '8px' }}>
                         Active Prescribed Medications ({rx.medications.length})
                       </div>
 
@@ -1415,42 +1598,42 @@ export default function DashboardPortal({
                             key={idx}
                             style={{
                               background: '#ffffff',
-                              border: '1.5px solid #000000',
+                              border: '1px solid #e2e8f0',
                               borderRadius: 'var(--radius-md)',
                               padding: '12px 14px'
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <strong style={{ fontSize: '0.95rem', color: '#000000' }}>{med.name}</strong>
+                              <strong style={{ fontSize: '0.95rem', color: 'var(--navy)' }}>{med.name}</strong>
                               <span style={{
-                                background: '#f1f5f9',
-                                color: '#000000',
+                                background: '#eef2ff',
+                                color: '#4f46e5',
                                 fontSize: '0.75rem',
-                                fontWeight: 800,
+                                fontWeight: 700,
                                 padding: '2px 8px',
                                 borderRadius: '4px',
-                                border: '1px solid #000000'
+                                border: '1px solid #c7d2fe'
                               }}>
                                 {med.dosage}
                               </span>
                             </div>
 
-                            <div style={{ fontSize: '0.8rem', color: '#000000', fontWeight: 800, marginBottom: '4px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#4f46e5', fontWeight: 700, marginBottom: '4px' }}>
                               ⏰ {med.schedule}
                             </div>
 
-                            <div style={{ fontSize: '0.8rem', color: '#111827', lineHeight: 1.4 }}>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: 1.4 }}>
                               {med.instructions}
                             </div>
 
                             {med.critical && (
                               <div style={{
                                 marginTop: '6px',
-                                background: '#ffffff',
-                                border: '2px solid #000000',
-                                color: '#000000',
+                                background: '#fef2f2',
+                                border: '1px solid #fecaca',
+                                color: '#b91c1c',
                                 fontSize: '0.725rem',
-                                fontWeight: 900,
+                                fontWeight: 700,
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 display: 'flex',
@@ -1469,12 +1652,12 @@ export default function DashboardPortal({
                     {/* Physician Notes & Precautions */}
                     {rx.notes && (
                       <div style={{
-                        background: '#ffffff',
-                        border: '1.5px solid #000000',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
                         borderRadius: 'var(--radius-md)',
                         padding: '10px 14px',
                         fontSize: '0.825rem',
-                        color: '#000000',
+                        color: '#334155',
                         marginBottom: '1rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -1495,17 +1678,18 @@ export default function DashboardPortal({
                           setActiveStep('reminders');
                         }}
                         style={{
-                          background: '#000000',
-                          border: '2px solid #000000',
+                          background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                          border: 'none',
                           color: '#ffffff',
                           borderRadius: 'var(--radius-sm)',
                           padding: '8px 16px',
                           fontSize: '0.8rem',
-                          fontWeight: 800,
+                          fontWeight: 700,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px'
+                          gap: '6px',
+                          boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
                         }}
                       >
                         <span>⏰</span>
@@ -1517,12 +1701,12 @@ export default function DashboardPortal({
                         onClick={() => setActiveStep('confusion')}
                         style={{
                           background: '#ffffff',
-                          border: '1.5px solid #000000',
-                          color: '#000000',
+                          border: '1px solid #cbd5e1',
+                          color: '#334155',
                           borderRadius: 'var(--radius-sm)',
                           padding: '8px 16px',
                           fontSize: '0.8rem',
-                          fontWeight: 800,
+                          fontWeight: 700,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -1532,8 +1716,29 @@ export default function DashboardPortal({
                         <span>⚠️</span>
                         <span>Check LASA Confusions</span>
                       </button>
-                    </div>
 
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePrescription(rx.id)}
+                        style={{
+                          background: '#fef2f2',
+                          border: '1px solid #fecaca',
+                          color: '#b91c1c',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '8px 14px',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          marginLeft: 'auto'
+                        }}
+                      >
+                        <span>🗑️</span>
+                        <span>Delete Prescription</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
